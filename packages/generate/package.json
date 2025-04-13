@@ -1,0 +1,37 @@
+{
+    "name": "@cobalt27/generate",
+    "version": "0.0.1",
+    "module": "src/index.ts",
+    "main": "src/index.ts",
+    "type": "module",
+    "license": "SSPL-1.0",
+    "files": [
+        "src",
+        "types",
+        "LICENSE"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/liontariai/cobalt",
+        "directory": "packages/generate"
+    },
+    "scripts": {
+        "format": "prettier --write ."
+    },
+    "dependencies": {
+        "@cobalt27/runtime": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "prettier": "latest"
+    },
+    "peerDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "prettier": {
+        "tabWidth": 4
+    }
+}

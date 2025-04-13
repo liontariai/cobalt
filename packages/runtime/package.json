@@ -1,0 +1,36 @@
+{
+    "name": "@cobalt27/runtime",
+    "version": "0.0.1",
+    "module": "src/index.ts",
+    "main": "src/index.ts",
+    "type": "module",
+    "types": "./types/index.d.ts",
+    "sideEffects": true,
+    "license": "SSPL-1.0",
+    "files": [
+        "src",
+        "types",
+        "LICENSE"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/liontariai/cobalt",
+        "directory": "packages/runtime"
+    },
+    "scripts": {
+        "format": "prettier --write ."
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "prettier": "latest"
+    },
+    "peerDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "prettier": {
+        "tabWidth": 4
+    }
+}
