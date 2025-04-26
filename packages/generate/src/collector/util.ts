@@ -1,7 +1,7 @@
 import * as ts from "typescript";
 import fs from "fs";
 import path from "path";
-export const FILENAME = "__ts-type-inline__";
+export const FILENAME = "__ts-type-test-inline-e1d70ff1__";
 export const FILENAME_RE = new RegExp(FILENAME);
 
 /**
@@ -251,7 +251,7 @@ export const createProgram = (
                     // console.log(`${moduleLiteral.text} -> ${resolvedPath}`);
                 }
 
-                const resolved = ts.resolveModuleName(
+                let resolved = ts.resolveModuleName(
                     resolvedPath,
                     containingFile,
                     options,
@@ -259,6 +259,33 @@ export const createProgram = (
                     compilerHost.getModuleResolutionCache?.(),
                     redirectedReference,
                 );
+
+                if (
+                    "failedLookupLocations" in resolved &&
+                    !resolved?.resolvedModule?.resolvedFileName
+                ) {
+                    try {
+                        const filename = containingFile.split(path.sep).pop()!;
+                        const dir = filename.includes(".")
+                            ? containingFile
+                                  .split(path.sep)
+                                  .slice(0, -1)
+                                  .join(path.sep)
+                            : containingFile;
+
+                        resolved = ts.resolveModuleName(
+                            Bun.resolveSync(resolvedPath, dir),
+                            containingFile,
+                            options,
+                            compilerHost,
+                            compilerHost.getModuleResolutionCache?.(),
+                            redirectedReference,
+                        );
+                    } catch (err: any) {
+                        console.warn(err);
+                    }
+                }
+
                 return resolved;
             });
         },
