@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/dev",
-    "version": "0.0.1",
+    "version": "0.4.0",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "type": "module",
@@ -34,7 +34,7 @@
     "dependencies": {
         "@cobalt27/generate": "workspace:*",
         "@graphql-tools/schema": "^10.0.14",
-        "@samarium.sdk/make": "^0.22.0",
+        "@samarium.sdk/make": "^0.24.0",
         "commander": "^12.1.0",
         "graphql-sse": "^2.5.4"
     }
