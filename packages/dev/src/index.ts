@@ -33,6 +33,7 @@ program.option(
     "Directory to search for operation endpoints",
     "operations",
 );
+program.option("--sdk-out <path>", "Custom path to save the samarium-sdk to");
 program.option("--gql", "Use GraphQL", true);
 program.option("--rest", "Use REST", false);
 program.option("-p, --port <port>", "Port to run the server on", "4000");
@@ -108,9 +109,11 @@ const sdk = await new GraphQLGenerator.Generator(
 const t4 = performance.now();
 console.log(`🚀  SDK took ${(t4 - t3).toFixed(2)} ms`);
 
+const sdkout = options.sdkOut ?? resolve("./.cobalt/sdk.ts", false)!;
+
 const port = options.port || 4000;
 Bun.write(
-    Bun.file(resolve("./.cobalt/sdk.ts", false)!),
+    Bun.file(sdkout),
     sdk
         .replaceAll("[AUTH_HEADER_NAME]", "Authorization")
         .replaceAll("[ENDPOINT]", `http://localhost:${port}/graphql`),
