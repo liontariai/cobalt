@@ -34,6 +34,7 @@ export interface TypeMeta {
     isNonNull: boolean;
     isScalar: boolean; // type with "format"
     scalarTSType?: string;
+    scalarTSTypeIsFinal?: boolean;
 
     isObject: boolean;
     fields: FieldMeta[];
