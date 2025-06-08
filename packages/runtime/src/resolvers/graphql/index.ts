@@ -34,6 +34,31 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
     fieldName: string,
     isSubscription?: boolean,
 ) => {
+    const debugLogStart = (args: A, context: CTX) => {
+        if (process.env.DEBUG) {
+            return [
+                Date.now(),
+                `
+    [${new Date().toLocaleString()}]
+    ${fieldName}(${Object.entries(args)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(", ")})
+            `,
+            ] as const;
+        }
+    };
+    const debugLogEnd = (t0: number, logStart: string, result: T) => {
+        if (process.env.DEBUG) {
+            const resultString = JSON.stringify(result);
+            return `
+    ${logStart}
+    ${resultString.slice(0, 100) + (resultString.length > 100 ? "..." : "")}
+    [${Date.now() - t0}ms]
+    [${(resultString.length / 1024).toFixed(3)} kb]
+            `;
+        }
+    };
+
     if (isSubscription) {
         return {
             subscribe: async function* resolver(
@@ -43,6 +68,8 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
                 context: CTX,
                 info: any,
             ) {
+                const [t0, logStart] = debugLogStart(args, context) ?? [];
+
                 const that = await makeAuthedCTX(context);
 
                 const asyncGen = fn.bind(that)(
@@ -51,6 +78,10 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
 
                 for await (const item of asyncGen) {
                     yield { [fieldName]: item };
+                    if (t0 && logStart) {
+                        const logEnd = debugLogEnd(t0, logStart, item);
+                        console.debug("\x1b[34m%s\x1b[0m", logEnd);
+                    }
                 }
             },
         };
@@ -63,8 +94,17 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
         context: CTX,
         info: any,
     ) {
+        const [t0, logStart] = debugLogStart(args, context) ?? [];
+
         const that = await makeAuthedCTX(context);
-        return await fn.bind(that)(...(Object.values(args) as A));
+        const result = await fn.bind(that)(...(Object.values(args) as A));
+
+        if (t0 && logStart) {
+            const logEnd = debugLogEnd(t0, logStart, result);
+            console.debug("\x1b[34m%s\x1b[0m", logEnd);
+        }
+
+        return result;
     };
 };
 
