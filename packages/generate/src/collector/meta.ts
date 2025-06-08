@@ -327,32 +327,34 @@ export const gatherMeta = (
         const type = collector.getType(typeName);
         if (!type) continue;
 
-        if (type.isUnion) {
-            type.scalarTSType = type.possibleTypes
-                .map((t) =>
-                    t.tsType!.aliasSymbol
-                        ? `${makeProtocolFriendlyName(
-                              t.name,
-                              collectRenamedTypes,
-                              ["[", "]"],
-                          ).replaceAll(
-                              /\[|\]/g,
-                              "",
-                          )}${Array(t.isList).fill("[]").join("")}`
-                        : t.tsTypeName,
-                )
-                .join(" | ");
-        } else if (type.isScalar) {
-            type.scalarTSType = type.tsTypeName;
-        } else if (type.isEnum && type.enumValues.length === 1) {
-            type.scalarTSType = type.enumValues[0].type.tsTypeName;
-        } else {
-            type.scalarTSType = type.tsType!.aliasSymbol
-                ? makeProtocolFriendlyName(
-                      type.tsTypeName!,
-                      collectRenamedTypes,
-                  )
-                : type.tsTypeName;
+        if (!type.scalarTSType) {
+            if (type.isUnion) {
+                type.scalarTSType = type.possibleTypes
+                    .map((t) =>
+                        t.tsType!.aliasSymbol
+                            ? `${makeProtocolFriendlyName(
+                                  t.name,
+                                  collectRenamedTypes,
+                                  ["[", "]"],
+                              ).replaceAll(
+                                  /\[|\]/g,
+                                  "",
+                              )}${Array(t.isList).fill("[]").join("")}`
+                            : t.tsTypeName,
+                    )
+                    .join(" | ");
+            } else if (type.isScalar) {
+                type.scalarTSType = type.tsTypeName;
+            } else if (type.isEnum && type.enumValues.length === 1) {
+                type.scalarTSType = type.enumValues[0].type.tsTypeName;
+            } else {
+                type.scalarTSType = type.tsType!.aliasSymbol
+                    ? makeProtocolFriendlyName(
+                          type.tsTypeName!,
+                          collectRenamedTypes,
+                      )
+                    : type.tsTypeName;
+            }
         }
 
         let countReferences = references.length;
@@ -434,6 +436,7 @@ export const gatherMeta = (
             renamedTypeName,
         ] of collectRenamedTypes.entries()) {
             if (
+                !type.scalarTSTypeIsFinal &&
                 type.scalarTSType?.includes(originalTypeName) &&
                 !typeNames.has(originalTypeName)
             ) {
@@ -454,9 +457,8 @@ const renameToProtocolFriendlyName = (
     name: string,
     ignoreChars: string[] = [],
 ) => {
-    if (name.matchAll(/import\([^)]*\)\./g).toArray().length > 0) {
-        name = name.replaceAll(/import\([^)]*\)\./g, "");
-    }
+    const importsRegex = new RegExp(/import\([^)]*\)\./g);
+
     // remove all ! indicating non-null
     // name = name.replaceAll("!", "");
 
@@ -491,6 +493,13 @@ const renameToProtocolFriendlyName = (
         `${replaceChars.map((c) => `\\${c}`).join("|")}`,
         "g",
     );
+
+    if (!name.match(regex) && !name.match(importsRegex)) return undefined;
+
+    if (name.matchAll(importsRegex).toArray().length > 0) {
+        name = name.replaceAll(importsRegex, "");
+    }
+
     let renamedName = name.replace(regex, "_");
     while (renamedName.includes("__")) {
         renamedName = renamedName.replace("__", "_");
@@ -506,20 +515,65 @@ const makeProtocolFriendlyName = (
     if (collectRenamedTypes.has(name)) {
         return collectRenamedTypes.get(name)!;
     }
-    const renamedName = renameToProtocolFriendlyName(name, ignoreChars);
-    collectRenamedTypes.set(name, renamedName);
-    return renamedName;
+
+    let renamedName = renameToProtocolFriendlyName(name, ignoreChars);
+    if (renamedName) {
+        // If there are types that have import references, it means that the same type (by name)
+        // exists in different locations, that's why typescript adds the import(...).Type prefix.
+        // In such cases we need to keep them distinct, so we don't override them with each other
+        let idx = 0;
+        let otherNamesWithSameRenamed: [name: string, renamed: string][] = [];
+        while (
+            // we only do this duplicate-renaming if the current name (which is being renamed)
+            // includes the import statement. Otherwise it might also be a type that results
+            // in the same renamed type if there're for example the same types one time as array
+            // and one time without it, or as object literal. the '[' and '{' both become '_'
+            // and we might get false duplicates
+            name.match(/import\([^)]*\)\./g) &&
+            (otherNamesWithSameRenamed = collectRenamedTypes
+                .entries()
+                .filter(([n, rn]) => rn === renamedName)
+                .toArray())?.length
+        ) {
+            const dupNumber: number = renamedName.match(/_Duplicate(\d+)_/)?.[1]
+                ? parseInt(renamedName.match(/_Duplicate(\d+)_/)?.[1]!)
+                : 0;
+
+            if (dupNumber) {
+                idx = dupNumber + 1;
+                renamedName = renamedName.replace(
+                    `_Duplicate${dupNumber}_`,
+                    `_Duplicate${idx}_`,
+                );
+            } else {
+                renamedName = `_Duplicate${++idx}_${renamedName}`;
+            }
+        }
+
+        collectRenamedTypes.set(name, renamedName);
+        return renamedName;
+    }
+    return name;
 };
 
 const makeIdentifyingTypeName = (
     program: { checker: ts.TypeChecker; sourceFile: ts.SourceFile },
     tsTypeAndSymbol: { type: ts.Type; symbol?: ts.Symbol },
-    override: { isInput?: boolean; isNonNull?: boolean },
+    override: {
+        isInput?: boolean;
+        isNonNull?: boolean;
+        removeUndefinedFromTypeNameBcItComesFromOptional?: boolean;
+    },
     collectRenamedTypes: Map<string, string>,
-): { typeName: string; identifyingTypeName: string } => {
+): {
+    typeName: string;
+    identifyingTypeName: string;
+    finalScalarTSType?: string;
+} => {
     const { type: tsType, symbol } = tsTypeAndSymbol;
 
     let typeName: string;
+    let finalScalarTSType: string | undefined = undefined;
     if (
         ("intrinsicName" in tsType && tsType.intrinsicName === "boolean") ||
         (tsType.isUnion() &&
@@ -536,6 +590,23 @@ const makeIdentifyingTypeName = (
             program.sourceFile,
             ts.TypeFormatFlags.NoTruncation,
         );
+
+        if (typeName === "any") {
+            typeName = "Record<string | number | symbol, unknown>";
+            finalScalarTSType = typeName;
+        }
+        if (typeName === "object") {
+            typeName = "Record<string, any>";
+            finalScalarTSType = typeName;
+        }
+    }
+
+    if (
+        override.removeUndefinedFromTypeNameBcItComesFromOptional &&
+        (typeName.includes(" | undefined") || typeName.includes(" | null"))
+    ) {
+        typeName = typeName.replaceAll(" | undefined", "");
+        typeName = typeName.replaceAll(" | null", "");
     }
 
     const isInput = override.isInput ?? false;
@@ -547,13 +618,26 @@ const makeIdentifyingTypeName = (
         return {
             typeName: finalName,
             identifyingTypeName: finalName,
+            finalScalarTSType,
         };
     }
+
+    // let identifyingTypeName = typeName;
+
+    // if (isInput) {
+    //     identifyingTypeName = `${typeName}Input`;
+    // }
+
+    // if (isNonNull) {
+    //     identifyingTypeName = `${identifyingTypeName}!`;
+    // }
+    // // else {
+    // //     identifyingTypeName = `${identifyingTypeName}Nullable`;
+    // // }
 
     if (isNonNull) {
         typeName = `${typeName}!`;
     }
-
     let identifyingTypeName = `${typeName.slice(
         0,
         isInput && isNonNull ? -1 : undefined,
@@ -572,6 +656,7 @@ const makeIdentifyingTypeName = (
     return {
         typeName,
         identifyingTypeName,
+        finalScalarTSType,
     };
 };
 
@@ -614,12 +699,15 @@ export const gatherMetaForType = (
             tsType = _tsType.types[0];
         }
     }
+
+    let removeUndefinedFromTypeNameBcItComesFromOptional = false;
     if (
         declaration &&
         "questionToken" in declaration &&
         declaration.questionToken
     ) {
         overrideIsNonNull = false;
+        removeUndefinedFromTypeNameBcItComesFromOptional = true;
     }
 
     let meta: TypeMeta = {
@@ -648,6 +736,7 @@ export const gatherMetaForType = (
 
         isScalar: false,
         scalarTSType: undefined,
+        scalarTSTypeIsFinal: false,
 
         isEnum: false,
 
@@ -664,19 +753,26 @@ export const gatherMetaForType = (
         tsTypeName: "",
     };
 
-    const { identifyingTypeName, typeName } = makeIdentifyingTypeName(
-        program,
-        { type: tsType, symbol },
-        {
-            isInput: meta.isInput,
-            isNonNull: meta.isNonNull,
-        },
-        collectRenamedTypes,
-    );
+    const { identifyingTypeName, typeName, finalScalarTSType } =
+        makeIdentifyingTypeName(
+            program,
+            { type: tsType, symbol },
+            {
+                isInput: meta.isInput,
+                isNonNull: meta.isNonNull,
+                removeUndefinedFromTypeNameBcItComesFromOptional,
+            },
+            collectRenamedTypes,
+        );
     meta.tsTypeName =
         meta.isNonNull && typeName.endsWith("!")
             ? typeName.slice(0, -1)
             : typeName;
+
+    if (finalScalarTSType) {
+        meta.scalarTSType = finalScalarTSType;
+        meta.scalarTSTypeIsFinal = true;
+    }
 
     collector.addTypeReference(identifyingTypeName, path.join("."));
 
@@ -716,8 +812,8 @@ export const gatherMetaForType = (
             const newmeta = {
                 ...arraymeta,
                 isList: depth,
-                name: `[${arraymeta.name}]`,
-                tsTypeName: `${arraymeta.tsTypeName}[]`,
+                name: `${Array(depth).fill("[").join("")}${arraymeta.name.replaceAll("[", "").replaceAll("]", "")}${Array(depth).fill("]").join("")}`,
+                tsTypeName: `${arraymeta.tsTypeName?.replaceAll("[]", "")}${Array(depth).fill("[]").join("")}`,
             };
             newmeta.ofType = {
                 ...arraymeta,
@@ -737,9 +833,18 @@ export const gatherMetaForType = (
     ) {
         meta.isUnion = true;
 
-        if (tsType.types.every((t) => t.isStringLiteral())) {
+        if (
+            tsType.types.some((t) => t.isStringLiteral()) ||
+            tsType.types.some((t) => t.isNumberLiteral())
+        ) {
             meta.isEnum = true;
-            meta.enumValues = tsType.types.map((t) => {
+            let enumValues: {
+                name: string;
+                description: string;
+                type: TypeMeta;
+            }[] = [];
+
+            for (const t of tsType.types) {
                 const literalMetaPath = [
                     ...path,
                     t.aliasSymbol?.escapedName ?? t.symbol?.name,
@@ -760,17 +865,115 @@ export const gatherMetaForType = (
                     literalMetaPath.join("."),
                 );
 
-                return {
-                    name: JSON.parse(literalMeta.tsTypeName!),
-                    description: `The value of the string literal ${literalMeta.tsTypeName}`,
+                let name = (literalMeta.tsType! as ts.StringLiteralType).value;
+
+                if (!isNaN(parseFloat(name))) {
+                    // if one string literal is a number, let's use a custom scalar instead
+                    // because enum member names cannot start with a digit and we would break
+                    // the enum value if we prefix it with an underscore or such
+                    enumValues = [];
+                    meta.isEnum = false;
+
+                    meta.isScalar = true;
+                    meta.scalarTSType = tsType.types
+                        .map((_t) =>
+                            _t.isStringLiteral()
+                                ? `"${_t.value}"`
+                                : _t.isNumberLiteral()
+                                  ? _t.value
+                                  : () => {
+                                        const unionMeta = gatherMetaForType(
+                                            [
+                                                ...path,
+                                                t.aliasSymbol?.escapedName ??
+                                                    t.symbol?.name,
+                                            ].join("."),
+                                            { type: t, symbol: t.symbol },
+                                            program,
+                                            collector,
+                                            collectRenamedTypes,
+                                            [
+                                                ...path,
+                                                t.aliasSymbol?.escapedName ??
+                                                    t.symbol?.name,
+                                            ].filter(Boolean) as string[],
+                                            meta,
+                                        );
+
+                                        return unionMeta.tsTypeName;
+                                    },
+                        )
+                        .filter(Boolean)
+                        .join(" | ");
+                    meta.scalarTSTypeIsFinal = true;
+
+                    break;
+                }
+
+                let description = `The value of the string literal ${literalMeta.tsTypeName}`;
+
+                // check if the union type comes from using an enum
+                // if so, we need to check if the key === value
+                // because if it doesn't, not only have to take the value
+                // as enum-member in graphql but also note the key name
+                // so that we can recreate the enum in samarium's typegen
+                if (t.symbol && "parent" in t.symbol) {
+                    const parentEnum = (t.symbol as any).parent as ts.Symbol;
+
+                    if (parentEnum && parentEnum.exports) {
+                        const [exportName, exportVal] =
+                            parentEnum.exports
+                                .entries()
+                                .find(
+                                    ([k, v]) => k.toString() === t.symbol.name,
+                                ) ?? [];
+
+                        if (
+                            exportVal &&
+                            exportVal.valueDeclaration?.parent &&
+                            "members" in exportVal.valueDeclaration?.parent
+                        ) {
+                            const members = exportVal.valueDeclaration?.parent
+                                .members as any[];
+
+                            const kvPair = members?.find(
+                                (a) => a.symbol?.name === exportName,
+                            );
+
+                            const keyName = kvPair.symbol?.name;
+                            const val = (
+                                program.checker.getTypeAtLocation(
+                                    kvPair.initializer as ts.Node,
+                                ) as ts.StringLiteralType
+                            ).value;
+
+                            if (keyName !== val) {
+                                // console.log(
+                                //     `Enum needs typedef comment, key is different from value: ${keyName} = ${val}`,
+                                // );
+                                name = val;
+                                description = `@property {"${val}"} ${keyName}`;
+                            }
+                        }
+                    }
+                }
+
+                enumValues.push({
+                    name,
+                    description,
                     type: literalMeta,
-                };
-            });
+                });
+            }
+            meta.enumValues = enumValues;
 
             meta.isUnion = false;
             meta.possibleTypes = [];
         } else {
-            tsType.types.forEach((t) => {
+            let unionTypeIsList = 0;
+            const unionTypes: TypeMeta[] = [];
+            let unionTypeNeedsScalar = false;
+
+            for (const t of tsType.types) {
                 const unionMeta = gatherMetaForType(
                     [
                         ...path,
@@ -786,8 +989,30 @@ export const gatherMetaForType = (
                     ].filter(Boolean) as string[],
                     meta,
                 );
-                meta.possibleTypes.push(unionMeta);
-            });
+
+                if (unionTypeIsList && unionMeta.isList !== unionTypeIsList) {
+                    unionTypeNeedsScalar = true;
+                } else if (!unionTypeIsList && unionMeta.isList) {
+                    unionTypeIsList = unionMeta.isList;
+                }
+
+                unionTypes.push(unionMeta);
+            }
+
+            if (unionTypeNeedsScalar) {
+                meta.isUnion = false;
+                meta.possibleTypes = [];
+
+                meta.isScalar = true;
+                meta.scalarTSType = unionTypes.map((t) => t.name).join(" | ");
+                meta.scalarTSTypeIsFinal = true;
+            } else {
+                if (unionTypeIsList) {
+                    meta.isList = unionTypeIsList;
+                }
+                meta.possibleTypes = unionTypes;
+            }
+
             if (tsType.types.length === 1) {
                 collector.removeType(identifyingTypeName);
 
@@ -881,8 +1106,8 @@ export const gatherMetaForType = (
 
             if ("labeledElementDeclarations" in tupleTypeTarget) {
                 const isOptional =
-                    !!tupleTypeTarget.labeledElementDeclarations![i]!
-                        .questionToken;
+                    !!tupleTypeTarget.labeledElementDeclarations?.[i]
+                        ?.questionToken;
 
                 if (isOptional && tupleMeta.isNonNull) {
                     tupleMeta = {
@@ -893,9 +1118,10 @@ export const gatherMetaForType = (
                 }
 
                 meta.fields.push({
-                    name: tupleTypeTarget.labeledElementDeclarations![
-                        i
-                    ]!.name.getText(),
+                    name:
+                        tupleTypeTarget.labeledElementDeclarations?.[
+                            i
+                        ]?.name.getText() ?? `_idx_${i}`,
                     index: i,
                     description: t.symbol
                         ?.getDocumentationComment(program.checker)
@@ -947,7 +1173,7 @@ export const gatherMetaForType = (
 
             fields.push(
                 gatherMetaForField(
-                    prop.name,
+                    makeProtocolFriendlyName(prop.name, collectRenamedTypes),
                     { type: propType, symbol: prop },
                     program,
                     collector,
@@ -1138,10 +1364,12 @@ export const gatherMetaForType = (
             });
         });
     } else if (tsType.isStringLiteral()) {
+        const name = tsType.value;
+
         meta.isEnum = true;
         meta.enumValues = [
             {
-                name: JSON.parse(meta.tsTypeName),
+                name,
                 description: `The value of the string literal ${meta.tsTypeName}`,
                 type: meta,
             },

@@ -7,7 +7,7 @@ import type {
 export class GeneratorSchemaGQL {
     public static ScalarTypeMap: Map<string, string> = new Map([
         ["string", "String"],
-        ["number", "Int"],
+        ["number", "Float"],
         ["boolean", "Boolean"],
     ]);
     public ScalarTypeMap: Map<string, string> =
@@ -25,7 +25,7 @@ export class GeneratorSchemaGQL {
                 !typeMeta.isInput &&
                 !typeMeta.isEnum &&
                 !typeMeta.parentType?.isUnion &&
-                !["ID", "Int", "String", "Boolean"].includes(
+                !["ID", "Int", "String", "Boolean", "Float"].includes(
                     this.ScalarTypeMap.get(typeMeta.name.replaceAll("!", "")) ??
                         typeMeta.name,
                 )
@@ -45,12 +45,28 @@ export class GeneratorSchemaGQL {
         const enums: string[] = [];
         for (const typeMeta of this.schemaMeta.types) {
             if (typeMeta.isEnum) {
-                const name = typeMeta.name.endsWith("!")
+                let name = typeMeta.name.endsWith("!")
                     ? typeMeta.name.slice(0, -1)
                     : typeMeta.name;
 
+                name = name.replaceAll("[", "").replaceAll("]", "");
+                name = name.replaceAll("!", "");
+
+                const enumValueTypeDefs = typeMeta.enumValues
+                    .map((v) =>
+                        v.description?.startsWith("@property")
+                            ? v.description
+                            : null,
+                    )
+                    .filter(Boolean);
+
                 enums.push(
-                    `${typeMeta.description ? `"""\n${typeMeta.description}\n"""` : ""}
+                    `"""
+${typeMeta.description ?? ""}
+${enumValueTypeDefs.length ? `@typedef {object} ${name}` : ""}
+${enumValueTypeDefs.join("\n")}
+${enumValueTypeDefs.length ? `@type {${name}}` : ""}
+                    """
                     enum ${name} {
                         ${typeMeta.enumValues
                             .map((value) => `${value.name}`)
@@ -146,7 +162,14 @@ export class GeneratorSchemaGQL {
                     : name;
                 name = name.endsWith("!") ? name.slice(0, -1) : name;
 
+                if (typeMeta.fields.length === 0) {
+                    console.warn(
+                        `[makeObjectTypes]: Type "${name}" as zero fields. Skipping in output GQL schema.`,
+                    );
+                    continue;
+                }
                 const fieldDefs: string[] = [];
+
                 for (const field of typeMeta.fields) {
                     let fieldArgs = "";
                     if (field.args?.length) {
@@ -180,9 +203,13 @@ export class GeneratorSchemaGQL {
         typeMeta: TypeMeta,
         description: string,
     ): string {
-        const typeName = typeMeta.name.endsWith("!")
-            ? typeMeta.name.slice(0, -1)
-            : typeMeta.name;
+        let typeName = typeMeta.name;
+
+        typeName = typeName.endsWith("!") ? typeName.slice(0, -1) : typeName;
+        typeName = typeMeta.isList
+            ? typeName.slice(typeMeta.isList, -typeMeta.isList)
+            : typeName;
+
         return `
         """
         ${description}
@@ -210,21 +237,30 @@ export class GeneratorSchemaGQL {
                     );
                 } else {
                     let name = typeMeta.name;
+
+                    name = name.endsWith("!") ? name.slice(0, -1) : name;
                     name = typeMeta.isList
                         ? name.slice(typeMeta.isList, -typeMeta.isList)
                         : name;
-                    name = name.endsWith("!") ? name.slice(0, -1) : name;
+
+                    // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
+                    name = name.replaceAll("[", "_").replaceAll("]", "_");
 
                     unions.push(
                         `${typeMeta.description ? `"""\n${typeMeta.description}\n"""` : ""}
-                        union ${typeMeta.name} = ${typeMeta.possibleTypes
+                        union ${name} = ${typeMeta.possibleTypes
                             .map((type) => {
                                 let n =
                                     this.ScalarTypeMap.get(
                                         type.name.replaceAll("!", ""),
                                     ) ?? type.name.replaceAll("!", "");
 
-                                return `${n}${type.isNonNull ? "!" : ""}`;
+                                n = n.endsWith("!") ? n.slice(0, -1) : n;
+                                n = typeMeta.isList
+                                    ? n.slice(typeMeta.isList, -typeMeta.isList)
+                                    : n;
+
+                                return n;
                             })
                             .join(" | ")}`,
                     );
