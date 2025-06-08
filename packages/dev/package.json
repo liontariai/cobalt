@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/dev",
-    "version": "0.4.0",
+    "version": "0.4.2",
     "type": "module",
     "module": "src/index.ts",
     "main": "src/index.ts",
@@ -8,7 +8,9 @@
     "license": "SSPL-1.0",
     "files": [
         "dist/**/*",
+        "src/**/*.ts",
         "!dist/**/__tests__/*",
+        "!src/**/__tests__/*",
         "README.md",
         "package.json"
     ],
@@ -25,7 +27,8 @@
     },
     "scripts": {
         "format": "prettier --write .",
-        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`"
+        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`",
+        "prepublishOnly": "bun run bundle"
     },
     "devDependencies": {
         "@types/bun": "latest",
