@@ -1,19 +1,23 @@
 {
     "name": "@cobalt27/runtime",
     "version": "0.4.0",
+    "type": "module",
     "module": "src/index.ts",
     "main": "src/index.ts",
-    "type": "module",
     "types": "./types/index.d.ts",
     "sideEffects": true,
     "license": "SSPL-1.0",
     "files": [
-        "src",
-        "types",
-        "LICENSE"
+        "dist/**/*",
+        "!dist/**/__tests__/*",
+        "README.md",
+        "package.json"
     ],
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "main": "dist/esm/index.js",
+        "module": "dist/esm/index.js",
+        "types": "dist/src/types/index.d.ts"
     },
     "repository": {
         "type": "git",
@@ -21,7 +25,8 @@
         "directory": "packages/runtime"
     },
     "scripts": {
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`"
     },
     "devDependencies": {
         "@types/bun": "latest",
