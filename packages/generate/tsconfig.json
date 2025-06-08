@@ -30,7 +30,7 @@
         "downlevelIteration": true,
         "allowSyntheticDefaultImports": true,
         "forceConsistentCasingInFileNames": true,
-        "types": ["bun-types", "@cobalt27/runtime"],
+        "types": ["bun-types"],
         "rootDir": ".",
         "baseUrl": ".",
         "paths": {

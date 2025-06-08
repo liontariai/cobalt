@@ -1,16 +1,22 @@
 {
     "name": "@cobalt27/dev",
     "version": "0.4.0",
+    "type": "module",
     "module": "src/index.ts",
     "main": "src/index.ts",
-    "type": "module",
+    "types": "src/index.ts",
     "license": "SSPL-1.0",
     "files": [
-        "src",
-        "types"
+        "dist/**/*",
+        "!dist/**/__tests__/*",
+        "README.md",
+        "package.json"
     ],
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "main": "dist/cjs/index.js",
+        "module": "dist/esm/index.js",
+        "types": "./dist/types/src/index.d.ts"
     },
     "repository": {
         "type": "git",
@@ -18,21 +24,22 @@
         "directory": "packages/dev"
     },
     "scripts": {
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`"
     },
     "devDependencies": {
         "@types/bun": "latest",
         "prettier": "latest"
     },
     "peerDependencies": {
-        "typescript": "~5.7.3",
-        "@cobalt27/runtime": "workspace:*"
+        "typescript": "~5.7.3"
     },
     "prettier": {
         "tabWidth": 4
     },
     "dependencies": {
         "@cobalt27/generate": "workspace:*",
+        "@cobalt27/runtime": "workspace:*",
         "@graphql-tools/schema": "^10.0.14",
         "@samarium.sdk/make": "^0.24.0",
         "commander": "^12.1.0",

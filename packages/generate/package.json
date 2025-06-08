@@ -1,17 +1,22 @@
 {
     "name": "@cobalt27/generate",
     "version": "0.4.0",
+    "type": "module",
     "module": "src/index.ts",
     "main": "src/index.ts",
-    "type": "module",
+    "types": "src/index.ts",
     "license": "SSPL-1.0",
     "files": [
-        "src",
-        "types",
-        "LICENSE"
+        "dist/**/*",
+        "!dist/**/__tests__/*",
+        "README.md",
+        "package.json"
     ],
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "main": "dist/cjs/index.js",
+        "module": "dist/esm/index.js",
+        "types": "./dist/types/src/index.d.ts"
     },
     "repository": {
         "type": "git",
@@ -19,7 +24,8 @@
         "directory": "packages/generate"
     },
     "scripts": {
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`"
     },
     "dependencies": {
         "@cobalt27/runtime": "workspace:*"

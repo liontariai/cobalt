@@ -30,7 +30,7 @@
         "downlevelIteration": true,
         "allowSyntheticDefaultImports": true,
         "forceConsistentCasingInFileNames": true,
-        "types": ["bun-types", "@cobalt27/runtime"],
+        "types": ["bun-types"],
         "rootDir": ".",
         "baseUrl": ".",
         "paths": {
@@ -38,5 +38,11 @@
             "@tests/*": ["./tests/*"]
         }
     },
-    "include": ["src/**/*", "src/**/*.json", "package.json"]
+    "include": [
+        "src/**/*",
+        "types/**/*",
+        "tests/**/*",
+        "src/**/*.json",
+        "package.json"
+    ]
 }

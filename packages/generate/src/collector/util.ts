@@ -19,9 +19,9 @@ export const FILENAME_RE = new RegExp(FILENAME);
  *     exclusively. False by default.
  */
 export const getOptions = (
-    cwd?: string,
+    cwd: string,
 ): { include?: string[]; compilerOptions: ts.CompilerOptions } => {
-    const maybeFile = ts.findConfigFile(cwd ?? __dirname, fs.existsSync);
+    const maybeFile = ts.findConfigFile(cwd, fs.existsSync);
     if (maybeFile == undefined) {
         throw new Error("setOptions: Cannot find tsconfig.json");
     }
