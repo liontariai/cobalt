@@ -1,13 +1,15 @@
 import { motion } from "framer-motion";
 import { TrashIcon } from "@/components/icons/TrashIcon";
-import { type getTodos, updateTodo, deleteTodo } from "./route";
+
+import { TodoWithBy } from "sdk";
+import { updateTodo, deleteTodo } from "./route";
 
 export const TodoItem = ({
     todo,
     mutateTodos,
     animate = true,
 }: {
-    todo: Awaited<ReturnType<typeof getTodos>>[number];
+    todo: TodoWithBy;
     mutateTodos: () => void;
     animate?: boolean;
 }) => {
@@ -59,11 +61,10 @@ export const TodoItem = ({
                             : "text-inherit"
                     } transition-colors duration-300`}
                 >
-                    {todo.text} (
+                    {todo.text}{" "}
                     <span className="text-gray-500 text-xs">
-                        {todo.extendedfield}
+                        (by {todo.by})
                     </span>
-                    )
                 </span>
                 <span className="text-inherit">
                     {todo.createdAt?.toLocaleDateString("en-US", {

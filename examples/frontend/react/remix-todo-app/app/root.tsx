@@ -8,6 +8,31 @@ import {
     ScrollRestoration,
 } from "@remix-run/react";
 import styles from "./styles/tailwind.css";
+import sdk from "sdk";
+sdk.init({
+    sseFetchTransform: async (url, options) => [
+        url,
+        {
+            ...options,
+            headers: {
+                ...(options?.headers ?? {}),
+                "Accept-Encoding": "*",
+            },
+        },
+    ],
+    get headers() {
+        if ("window" in globalThis && globalThis.window.localStorage) {
+            return {
+                Authorization:
+                    globalThis.window.localStorage.getItem("userid") ??
+                    "anonymous",
+            };
+        }
+        return {
+            Authorization: "anonymous",
+        };
+    },
+});
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
