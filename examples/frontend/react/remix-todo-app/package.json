@@ -3,7 +3,6 @@
     "private": true,
     "sideEffects": false,
     "type": "module",
-    "license": "SSPL-1.0",
     "scripts": {
         "build": "remix build",
         "cobalt": "bun --watch -e 'await import(\"@cobalt27/dev\")' - --dir ./app/server/operations",
@@ -16,13 +15,13 @@
     },
     "dependencies": {
         "@cobalt27/runtime": "workspace:*",
-        "@prisma/client": "^6.6.0",
+        "@prisma/client": "~6.6.0",
         "@remix-run/css-bundle": "^2.12.1",
         "@remix-run/node": "^2.10.2",
         "@remix-run/react": "^2.10.2",
         "@remix-run/serve": "^2.10.2",
         "@repeaterjs/react-hooks": "^0.1.1",
-        "@samarium.sdk/make": "^0.22.0",
+        "@samarium.sdk/make": "^0.24.0",
         "framer-motion": "^11.9.0",
         "isbot": "^4.1.0",
         "react": "^18.3.1",
@@ -39,9 +38,8 @@
         "@types/react-dom": "^18.2.7",
         "autoprefixer": "^10.4.14",
         "postcss": "^8.4.21",
-        "prisma": "^6.6.0",
+        "prisma": "~6.6.0",
         "tailwindcss": "^3.3.0",
-        "typescript": "^5.1.6",
         "vite-tsconfig-paths": "^5.0.1"
     },
     "engines": {

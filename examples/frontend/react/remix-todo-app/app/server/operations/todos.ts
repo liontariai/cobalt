@@ -5,19 +5,25 @@ import { Prisma } from "@prisma/client";
  * @param where - The where clause to filter the todos
  * @returns The todos
  */
-export async function Query(where?: Prisma.TodoWhereInput) {
-    const { prisma } = $$ctx(this);
+export async function Query(
+    where?: Omit<Prisma.TodoWhereInput, "AND" | "OR" | "NOT" | "ownerId">,
+) {
+    const { ownerId, prisma } = $$ctx(this);
 
     return (
         await prisma.todo.findMany({
-            where,
+            where: {
+                ...where,
+                ownerId,
+            },
         })
     ).map((todo) => ({
         id: todo.id,
         text: todo.text,
         completed: todo.completed,
         createdAt: todo.createdAt,
+        by: todo.ownerId,
     }));
 }
 
-export const __typename = "Todo";
+export const __typename = "TodoWithBy";
