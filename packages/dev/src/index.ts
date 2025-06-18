@@ -14,6 +14,7 @@ import { GraphQLGenerator, Flavors } from "@samarium.sdk/make";
 
 import { createHandler } from "graphql-sse/lib/use/fetch";
 import { makeGraphQLHandler } from "./util";
+import prettier from "prettier";
 
 const cwd = process.cwd();
 
@@ -38,6 +39,7 @@ program.option("--gql", "Use GraphQL", true);
 program.option("--rest", "Use REST", false);
 program.option("-p, --port <port>", "Port to run the server on", "4000");
 program.option("-w, --watch", "Watch for changes and restart the server");
+program.option("--pretty", "Format the output graphql/openapi schema", false);
 program.parse(process.argv);
 const options = program.opts();
 
@@ -54,9 +56,13 @@ if (!operationsDir) {
 
 const t1 = performance.now();
 const generator = new Generator();
-const { schema, entrypoint, tsTypes } = await generator.generate(operationsDir);
+let { schema, entrypoint, tsTypes } = await generator.generate(operationsDir);
 const t2 = performance.now();
 console.log(`🚀  Generator took ${(t2 - t1).toFixed(2)} ms`);
+
+if (options.pretty) {
+    schema = await prettier.format(schema, { parser: "graphql" });
+}
 
 await Bun.write(Bun.file(resolve("./.cobalt/schema.graphql", false)!), schema);
 await Bun.write(
