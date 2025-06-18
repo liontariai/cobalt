@@ -12,12 +12,11 @@ import {
 import type {
     GraphQLSchema,
     DocumentNode,
-    ValidationRule,
     FormattedExecutionResult,
     GraphQLFormattedError,
 } from "graphql";
 
-import type { Context, Env, Input, MiddlewareHandler } from "hono";
+import type { Context } from "hono";
 
 async function parseBody(req: Request): Promise<Record<string, unknown>> {
     const contentType = req.headers.get("content-type");
