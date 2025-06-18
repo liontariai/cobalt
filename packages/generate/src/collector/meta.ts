@@ -462,10 +462,10 @@ export const gatherMeta = (
     }
 
     // remove all types that are not used
-    meta.types = meta.types.filter((t) => {
-        // console.log(t.name, collector.typeReferences.get(t.name));
-        return collector.typeReferences.get(t.name)?.length ?? -1 > 0;
-    });
+    // meta.types = meta.types.filter((t) => {
+    //     // console.log(t.name, collector.typeReferences.get(t.name));
+    //     return collector.typeReferences.get(t.name)?.length ?? -1 > 0;
+    // });
 
     // ======= post-processing =======
 
