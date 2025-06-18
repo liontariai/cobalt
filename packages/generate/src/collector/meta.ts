@@ -206,9 +206,21 @@ export const gatherMeta = (
                     Array(ret.type.isList).fill("[").join("") +
                     __typename.type.enumValues[0].name +
                     Array(ret.type.isList).fill("]").join("");
+
+                const ref = [...resolverMeta.path, "return"].join(".");
                 collector.removeType(__typename.type.name);
+                collector.removeTypeReference(ret.type.name, ref);
+                collector.typeReferences.forEach((refs, typeNames) => {
+                    if (refs.includes(ref)) {
+                        collector.removeTypeReference(typeNames, ref);
+                    }
+                });
 
                 collectRenamedTypes.set(ret.type.name, finalTypeName);
+                collector.addTypeReference(
+                    finalTypeName,
+                    [...resolverMeta.path, "return"].join("."),
+                );
 
                 // collector.removeType(ret.type.name);
                 ret.type.name = finalTypeName;
@@ -448,6 +460,13 @@ export const gatherMeta = (
             }
         }
     }
+
+    // remove all types that are not used
+    meta.types = meta.types.filter((t) => {
+        // console.log(t.name, collector.typeReferences.get(t.name));
+        return collector.typeReferences.get(t.name)?.length ?? -1 > 0;
+    });
+
     // ======= post-processing =======
 
     return meta;
@@ -751,6 +770,7 @@ export const gatherMetaForType = (
 
         tsType,
         tsTypeName: "",
+        path,
     };
 
     const { identifyingTypeName, typeName, finalScalarTSType } =

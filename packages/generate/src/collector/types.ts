@@ -53,6 +53,8 @@ export interface TypeMeta {
 
     tsType?: import("typescript").Type;
     tsTypeName?: string;
+
+    path: string[];
 }
 
 export interface FieldMeta {
