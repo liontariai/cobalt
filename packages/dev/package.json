@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/dev",
-    "version": "0.4.3",
+    "version": "0.4.4",
     "type": "module",
     "module": "src/index.ts",
     "main": "src/index.ts",
@@ -31,8 +31,7 @@
         "prepublishOnly": "bun run bundle"
     },
     "devDependencies": {
-        "@types/bun": "latest",
-        "prettier": "latest"
+        "@types/bun": "latest"
     },
     "peerDependencies": {
         "typescript": "~5.7.3"
@@ -47,6 +46,7 @@
         "@samarium.sdk/make": "^0.24.0",
         "commander": "^12.1.0",
         "graphql-sse": "^2.5.4",
-        "hono": "^4.8.0"
+        "hono": "^4.8.0",
+        "prettier": "^3.5.3"
     }
 }
