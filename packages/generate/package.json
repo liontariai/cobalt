@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/generate",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "type": "module",
     "module": "src/index.ts",
     "main": "src/index.ts",
