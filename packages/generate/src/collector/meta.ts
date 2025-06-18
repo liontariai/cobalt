@@ -704,7 +704,15 @@ export const gatherMetaForType = (
             ?.valueDeclaration;
     let overrideIsNonNull = undefined;
     if (_tsType.isUnion()) {
-        _tsType.types = _tsType.types.filter((t) => {
+        // strangely we end up here with union types that only have one possible type
+        // that means that 'undefined' does not show up in the union
+        // but it comes probably from optionals
+        const isUnionWithLengthOne = _tsType.types.length === 1;
+        // ||
+        // (program.checker.typeToString(_tsType) === "boolean" &&
+        //     _tsType.types.length === 2);
+
+        _tsType.types = _tsType.types.filter((t, i, arr) => {
             const isNullOrUndefined =
                 (t.flags & ts.TypeFlags.Null) !== 0 ||
                 (t.flags & ts.TypeFlags.Undefined) !== 0;
@@ -714,8 +722,13 @@ export const gatherMetaForType = (
             }
             return true;
         });
+
         if (_tsType.types.length === 1) {
             tsType = _tsType.types[0];
+        }
+
+        if (isUnionWithLengthOne) {
+            overrideIsNonNull = false;
         }
     }
 
