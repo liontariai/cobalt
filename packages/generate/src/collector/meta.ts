@@ -337,7 +337,7 @@ export const gatherMeta = (
 
     for (const [typeName, references] of collector.typeReferences.entries()) {
         const type = collector.getType(typeName);
-        if (!type) continue;
+        if (!type || references.length === 0) continue;
 
         if (!type.scalarTSType) {
             if (type.isUnion) {
@@ -460,12 +460,6 @@ export const gatherMeta = (
             }
         }
     }
-
-    // remove all types that are not used
-    // meta.types = meta.types.filter((t) => {
-    //     // console.log(t.name, collector.typeReferences.get(t.name));
-    //     return collector.typeReferences.get(t.name)?.length ?? -1 > 0;
-    // });
 
     // ======= post-processing =======
 
