@@ -6,5 +6,6 @@ await build({
     external: Object.keys(require("./package.json").dependencies),
     outdir: "./dist/esm",
     format: "esm",
-    target: "bun",
+    banner: "#!/usr/bin/env bun",
+    target: "node",
 });

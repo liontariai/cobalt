@@ -19,9 +19,9 @@ export const FILENAME_RE = new RegExp(FILENAME);
  *     exclusively. False by default.
  */
 export const getOptions = (
-    cwd: string,
+    cwd?: string,
 ): { include?: string[]; compilerOptions: ts.CompilerOptions } => {
-    const maybeFile = ts.findConfigFile(cwd, fs.existsSync);
+    const maybeFile = ts.findConfigFile(cwd ?? __dirname, fs.existsSync);
     if (maybeFile == undefined) {
         throw new Error("setOptions: Cannot find tsconfig.json");
     }
@@ -74,9 +74,6 @@ export const createInlineProgram = (
         languageVersion: ts.ScriptTarget,
         ...args: any[]
     ) => {
-        // if (fileName.includes("ctx")) {
-        // console.log(fileName);
-        // }
         if (!FILENAME_RE.test(fileName)) {
             return (compilerHost.getSourceFile as any)(
                 fileName,
@@ -89,45 +86,7 @@ export const createInlineProgram = (
         }
         return sourceFile;
     };
-    const options = {}; //getOptions(cwd);
-    // const options = {
-    //     include: _options.include,
-
-    //     ..._options.compilerOptions,
-
-    //     jsx: _options.compilerOptions.jsx
-    //         ? ts.JsxEmit[
-    //               _options.compilerOptions
-    //                   .jsx as unknown as keyof typeof ts.JsxEmit
-    //           ]
-    //         : undefined,
-    //     module: _options.compilerOptions.module
-    //         ? ts.ModuleKind[
-    //               _options.compilerOptions
-    //                   .module as unknown as keyof typeof ts.ModuleKind
-    //           ]
-    //         : undefined,
-    //     moduleDetection: _options.compilerOptions.moduleDetection
-    //         ? ts.ModuleDetectionKind[
-    //               _options.compilerOptions
-    //                   .moduleDetection as unknown as keyof typeof ts.ModuleDetectionKind
-    //           ]
-    //         : undefined,
-    //     moduleResolution: _options.compilerOptions.moduleResolution
-    //         ? ts.ModuleResolutionKind[
-    //               _options.compilerOptions
-    //                   .moduleResolution as unknown as keyof typeof ts.ModuleResolutionKind
-    //           ]
-    //         : undefined,
-    //     target: _options.compilerOptions.target
-    //         ? ts.ScriptTarget[
-    //               _options.compilerOptions
-    //                   .target as unknown as keyof typeof ts.ScriptTarget
-    //           ]
-    //         : undefined,
-
-    //     strictNullChecks: true,
-    // };
+    const options = {};
     const compilerHost = ts.createCompilerHost(options);
     const customCompilerHost: ts.CompilerHost = {
         ...compilerHost,
@@ -240,13 +199,23 @@ export const createProgram = (
                     (alias = pathAliasesKeys.find(
                         (key) =>
                             moduleLiteral.text === key ||
-                            moduleLiteral.text.startsWith(key),
+                            moduleLiteral.text.startsWith(key) ||
+                            moduleLiteral.text.startsWith(
+                                key.replace("/*", "/"),
+                            ),
                     ))
                 ) {
                     resolvedPath = path.resolve(
                         options.baseUrl!,
                         options.paths?.[alias]?.[0]!,
                     );
+                    if (resolvedPath.endsWith("/*")) {
+                        resolvedPath = resolvedPath.replace("/*", "");
+                        resolvedPath += `/${moduleLiteral.text.replace(
+                            alias.replace("/*", "/"),
+                            "",
+                        )}`;
+                    }
 
                     // console.log(`${moduleLiteral.text} -> ${resolvedPath}`);
                 }
