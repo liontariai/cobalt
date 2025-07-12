@@ -1,0 +1,22 @@
+import "User";
+import "Organization";
+
+generator client {
+    provider = "prisma-client"
+    output   = env("PRISMA_CLIENT_OUTPUT")
+    moduleFormat = "esm"
+
+    previewFeatures = ["queryCompiler", "driverAdapters"]
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+plugin prisma {
+    provider = "@core/prisma"
+}
+plugin enhancer {
+    provider = "@core/enhancer"
+}

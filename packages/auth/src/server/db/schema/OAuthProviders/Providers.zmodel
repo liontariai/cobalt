@@ -1,0 +1,111 @@
+
+enum OpenIdProvider {
+    apple
+    discord
+    facebook
+    github
+    google
+    microsoft
+    slack
+    spotify
+    twitch
+    x
+    yahoo
+}
+
+type OpenIdClaims {
+    apple     OpenIdAppleClaims?
+    discord   OpenIdDiscordClaims?
+    facebook  OpenIdFacebookClaims?
+    github    OpenIdGithubClaims?
+    google    OpenIdGoogleClaims?
+    microsoft OpenIdMicrosoftClaims?
+    slack     OpenIdSlackClaims?
+    spotify   OpenIdSpotifyClaims?
+    twitch    OpenIdTwitchClaims?
+    x         OpenIdXClaims?
+    yahoo     OpenIdYahooClaims?
+}
+
+type OpenIdAppleClaims {
+    sub              String
+
+    email            String?
+    email_verified   Boolean?
+    is_private_email Boolean?
+}
+
+type OpenIdDiscordClaims {
+    sub                String
+
+    email              String?
+    email_verified     Boolean?
+    preferred_username String?
+    avatar             String?
+    locale             String?
+}
+
+type OpenIdFacebookClaims {
+    sub     String
+
+    email   String?
+    name    String?
+    picture String?
+}
+
+type OpenIdGithubClaims {
+    sub        String
+
+    email      String?
+    login      String?
+    name       String?
+    avatar_url String?
+}
+
+type OpenIdGoogleClaims {
+    sub            String
+
+    email          String?
+    email_verified Boolean?
+    name           String?
+    picture        String?
+}
+
+type OpenIdMicrosoftClaims {
+    sub   String
+
+    email String?
+}
+
+type OpenIdSlackClaims {
+    sub   String
+
+    email String?
+}
+
+type OpenIdSpotifyClaims {
+    sub   String
+
+    email String?
+    name  String?
+}
+
+type OpenIdTwitchClaims {
+    sub   String
+
+    email String?
+}
+
+type OpenIdXClaims {
+    sub      String
+
+    id       String?
+    name     String?
+    username String?
+}
+
+type OpenIdYahooClaims {
+    sub   String
+
+    email String?
+}

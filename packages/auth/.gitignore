@@ -1,0 +1,19 @@
+node_modules
+
+/.cache
+build/
+*.db
+
+src/server/db/prisma
+src/server/db/schema/@prisma/client
+src/server/db/schema/prisma
+src/server/db/zenstack
+
+.cobalt/
+
+persist.json
+
+# sst
+.sst
+
+pglite_data/

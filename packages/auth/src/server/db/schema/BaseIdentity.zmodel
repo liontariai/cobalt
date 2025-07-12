@@ -1,0 +1,6 @@
+abstract model BaseIdentity {
+  id         String   @id @default(ulid())
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt()
+}

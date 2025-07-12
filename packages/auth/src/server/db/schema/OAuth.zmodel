@@ -1,0 +1,12 @@
+import "Identity";
+import "User";
+import "OAuthProviders/Providers";
+
+model OpenIdUserAccount extends OpenIdConnection {
+    user     User           @relation("openIdConnections", fields: [iid], references: [id])
+
+    provider OpenIdProvider
+    claims   OpenIdClaims   @json
+
+    @@allow("all", true)
+}
