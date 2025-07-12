@@ -33,15 +33,15 @@ export const initCommand = (program: Command) => {
                     build: "cobalt build",
                 },
                 dependencies: {
-                    "@cobalt27/runtime": "workspace:*",
-                    // "@cobalt27/auth": "latest",
+                    "@cobalt27/runtime": "latest",
+                    "@cobalt27/auth": "latest",
                     graphql: "^16.8.1",
                     "graphql-sse": "^2.5.4",
                     "@graphql-tools/schema": "^10.0.0",
                 },
                 devDependencies: {
                     "bun-types": "latest",
-                    "@cobalt27/dev": "workspace:*",
+                    "@cobalt27/dev": "latest",
                     typescript: "~5.7.3",
                     prettier: "^3.0.0",
                     "@types/node": "^20.0.0",
