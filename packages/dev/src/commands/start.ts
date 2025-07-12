@@ -3,7 +3,7 @@
 import { Command } from "commander";
 import { resolve } from "./shared";
 import path from "path";
-import { $ } from "bun";
+import { spawnSync } from "child_process";
 
 export const startCommand = (program: Command) => {
     const startCmd = program
@@ -25,7 +25,9 @@ export const startCommand = (program: Command) => {
             }
 
             // start the server
-            $`bun run ${serverPath} --port ${port}`;
+            spawnSync("node", [serverPath, "--port", port], {
+                stdio: "inherit",
+            });
         });
 
     return startCmd;

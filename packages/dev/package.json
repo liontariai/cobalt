@@ -29,7 +29,7 @@
     },
     "scripts": {
         "format": "prettier --write .",
-        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`",
+        "bundle": "bun bundle.ts",
         "prepublishOnly": "bun run bundle"
     },
     "devDependencies": {
