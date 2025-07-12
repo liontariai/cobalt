@@ -1,0 +1,90 @@
+import "BaseIdentity";
+
+type Address {
+    city       String?
+    country    String?
+    street     String?
+    additional String?
+    zip        String?
+    state      String?
+}
+type GeoLocation {
+    lat     Float
+    lon     Float
+    alt     Float?
+
+    h3Index String?
+}
+
+model Identity extends BaseIdentity {
+
+    owner               Identity?             @relation("owner", fields: [owner_id], references: [id]) @omit
+    owns                Identity[]            @relation("owner") @omit
+    owner_id            String?               @omit
+
+    root                Identity?             @relation("root", fields: [root_id], references: [id]) @omit
+    tree                Identity[]            @relation("root") @omit
+    root_id             String?               @omit
+
+    parent              Identity?             @relation("parent", fields: [parent_id], references: [id]) @omit
+    children            Identity[]            @relation("parent") @omit
+    parent_id           String?               @omit
+
+    associations        IdentityAssociation[] @relation("associations") @omit
+    associatees         IdentityAssociation[] @relation("associatees") @omit
+
+    open_id_connections OpenIdConnection[]    @relation("open_id_connections") @omit
+
+    address             Address?              @json @omit
+    location            GeoLocation?          @json @omit
+
+    type                String                @omit
+    @@delegate(type)
+
+    @@index([type])
+    @@index([location])
+
+    @@allow("all", true)
+}
+
+model IdentityAssociation {
+    identity  Identity @relation("associations", fields: [iid], references: [id]) @omit
+    iid       String   @omit
+
+    associate Identity @relation("associatees", fields: [aid], references: [id]) @omit
+    aid       String   @omit
+
+    type      String   @omit
+    @@delegate(type)
+    @@index([type])
+
+    @@id([iid, aid])
+}
+
+type OAuthAccessToken {
+    name         String
+
+    access_token String
+    expires_at   DateTime
+
+    scopes       String[]
+}
+
+model OpenIdConnection {
+    identity      Identity           @relation("open_id_connections", fields: [iid], references: [id]) @omit
+    iid           String             @omit
+
+    connection_id String             @default(ulid())
+
+    expires_at    DateTime?
+
+    last_used_at  DateTime?          @default(now())
+    created_at    DateTime?          @default(now())
+    updated_at    DateTime?          @updatedAt
+
+    access_tokens OAuthAccessToken[] @json
+
+    type          String             @omit
+    @@delegate(type)
+    @@id([iid, connection_id])
+}

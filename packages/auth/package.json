@@ -1,0 +1,62 @@
+{
+    "name": "@cobalt27/auth",
+    "version": "0.5.0-alpha.1",
+    "module": "src/index.ts",
+    "main": "src/index.ts",
+    "type": "module",
+    "license": "SSPL-1.0",
+    "files": [
+        "dist/**/*",
+        "src/**/*.ts",
+        "!dist/**/__tests__/*",
+        "!src/**/__tests__/*",
+        "README.md",
+        "package.json"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "main": "dist/cjs/index.js",
+        "module": "dist/esm/index.js",
+        "types": "./dist/types/src/index.d.ts"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/liontariai/cobalt",
+        "directory": "packages/auth"
+    },
+    "scripts": {
+        "dev": "OPENAUTH_ISSUER=http://localhost:4000 bun --watch -e 'await import(\"@cobalt27/dev\")' - dev --dir ./src/server/operations",
+        "format": "prettier --write .",
+        "setup:oauth-sdks": "bun -e 'await (await import(\"./src/generate/oauth-sdks.ts\")).generateOauthSdks();'",
+        "setup:zenstack": "zenstack generate --schema ./src/server/db/schema/_schema.zmodel --output ./src/server/db/zenstack"
+    },
+    "devDependencies": {
+        "@cobalt27/dev": "workspace:*",
+        "@samarium.sdk/new": "^0.24.0",
+        "@types/aws-lambda": "8.10.147",
+        "@types/bun": "latest",
+        "@types/node": "latest",
+        "prettier": "latest",
+        "prisma": "~6.10.0",
+        "zenstack": "~2.16.1"
+    },
+    "peerDependencies": {
+        "typescript": "~5.7.3"
+    },
+    "prettier": {
+        "tabWidth": 4
+    },
+    "dependencies": {
+        "@apollo/server": "^4.11.3",
+        "@aws-sdk/client-sesv2": "^3.758.0",
+        "@cobalt27/runtime": "workspace:*",
+        "@electric-sql/pglite": "^0.3.4",
+        "@openauthjs/openauth": "^0.4.3",
+        "@prisma/client": "~6.10.0",
+        "@samarium.sdk/make": "^0.24.0",
+        "@zenstackhq/runtime": "~2.16.1",
+        "@zenstackhq/sdk": "~2.16.1",
+        "pglite-prisma-adapter": "^0.6.1",
+        "sst": "3.9.20"
+    }
+}

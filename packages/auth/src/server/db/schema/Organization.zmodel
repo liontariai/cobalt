@@ -1,0 +1,26 @@
+import "Identity";
+import "User";
+
+type OrganizationalRole {
+    name        String
+    permissions String[]
+
+    is_default  Boolean
+}
+
+model Organization extends Identity {
+    name    String
+
+    roles   OrganizationalRole[]     @json
+
+    members OrganizationMembership[] @relation("associatees")
+}
+
+model OrganizationMembership extends IdentityAssociation {
+    user User         @relation("associations", fields: [iid], references: [id])
+    org  Organization @relation("associatees", fields: [aid], references: [id])
+
+    role String       @default("default")
+
+    @@index([aid, role])
+}

@@ -1,0 +1,23 @@
+import "Identity";
+import "OAuth";
+import "Organization";
+
+type UserEmail {
+    email    String
+    primary  Boolean @default(false)
+    verified Boolean @default(false)
+}
+
+model User extends Identity {
+
+    user_arn         String                   @unique
+    fullname         String?
+
+    emails           UserEmail[]              @json
+    open_id_accounts OpenIdUserAccount[]      @relation("openIdConnections")
+
+    org_memberships  OrganizationMembership[] @relation("associations")
+
+    @@allow("all", true)
+}
+

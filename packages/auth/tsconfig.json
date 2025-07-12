@@ -1,0 +1,45 @@
+{
+    "include": ["src/**/*.ts"],
+    "compilerOptions": {
+        // Enable latest features
+        "lib": ["ES2022"],
+        "target": "ES2022",
+        "module": "ES2022",
+        "jsx": "react-jsx",
+        "allowJs": true,
+
+        "isolatedModules": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+
+        "types": ["node", "@cobalt27/runtime"],
+        "allowSyntheticDefaultImports": true,
+
+        // Bundler mode
+        "moduleResolution": "Bundler",
+        "allowImportingTsExtensions": true,
+        "verbatimModuleSyntax": true,
+        "noEmit": true,
+
+        // Best practices
+        "skipLibCheck": true,
+        "noFallthroughCasesInSwitch": true,
+
+        // Some stricter flags (disabled by default)
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noPropertyAccessFromIndexSignature": false,
+
+        // needed for correctly detecting null | undefined in types
+        "strict": true,
+        // we are using 'this' for cobalt runtime helper functions and dont want to define it, so let's mute the ts error
+        "noImplicitThis": false,
+
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./src/server/*"],
+            "$$ctx": ["./src/server/ctx.ts"],
+            "$$types": ["./.cobalt/$$types/index.ts"]
+        }
+    }
+}
