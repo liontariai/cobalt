@@ -4,25 +4,25 @@ type CTX = {
 };
 
 const makeAuthedCTX = async (ctx: CTX) => {
-    // const __cobalt = ctx.__cobalt as CobaltGlobalObject["__cobalt"];
+    const __cobalt = ctx.__cobalt as CobaltGlobalObject["__cobalt"];
 
-    // const cobaltAuth = __cobalt?.auth;
-    // const token = ctx.headers.get("Authorization") ?? "";
-    // const authed = await cobaltAuth?.cobalt?.oauth?.verify(token);
-    // if (authed?.err) {
-    //     throw authed.err;
-    // }
+    const cobaltAuth = __cobalt?.auth;
+    const token = ctx.headers.get("Authorization") ?? "";
+    const authed = await cobaltAuth?.cobalt?.oauth?.verify(token);
+    if (authed?.err) {
+        throw authed.err;
+    }
 
-    // const $$auth = authed && {
-    //     token: authed,
-    //     query: cobaltAuth?.cobalt?.sdk.query,
-    //     mutation: cobaltAuth?.cobalt?.sdk.mutation,
-    // };
+    const $$auth = authed && {
+        token: authed,
+        query: cobaltAuth?.cobalt?.sdk.query,
+        mutation: cobaltAuth?.cobalt?.sdk.mutation,
+    };
 
     const that = {
         $$ctx: {
             ...ctx,
-            // $$auth,
+            $$auth,
         },
     };
 

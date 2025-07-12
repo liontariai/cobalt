@@ -95,7 +95,7 @@ const makeHelperTypes = (
                 [k in FilterKeysWithNever<fieldsFuncs>]: Parameters<fieldsFuncs[k]>;
             };
             returns: {
-                [k in FilterKeysWithNever<fieldsFuncs>]: ReturnType<fieldsFuncs[k]>;
+                [k in FilterKeysWithNever<fieldsFuncs>]: Awaited<ReturnType<fieldsFuncs[k]>>;
             };
         };
 
@@ -180,14 +180,25 @@ export const gatherMeta = (
             const resolverSymbol = symbols.find((s) => s.name === "RESOLVER")!;
             const resolverType =
                 checker.getDeclaredTypeOfSymbol(resolverSymbol);
-            const resolverMeta = gatherMetaForType(
-                "",
-                { type: resolverType, symbol: resolverSymbol },
-                { checker, sourceFile },
-                collector,
-                collectRenamedTypes,
-                [`${resolverName}:`],
-            );
+
+            let resolverMeta: TypeMeta | undefined;
+            try {
+                resolverMeta = gatherMetaForType(
+                    "",
+                    { type: resolverType, symbol: resolverSymbol },
+                    { checker, sourceFile },
+                    collector,
+                    collectRenamedTypes,
+                    [`${resolverName}:`],
+                );
+            } catch (e) {
+                collector.removeType("RESOLVER");
+                collector.removeType("RESOLVER!");
+
+                console.error(e);
+                console.log(`${resolverName} is not a valid resolver`);
+                continue;
+            }
 
             collector.removeType("RESOLVER");
             collector.removeType("RESOLVER!");
@@ -195,8 +206,16 @@ export const gatherMeta = (
             resolverMeta.name = resolverName;
             collector.addType(resolverMeta);
 
-            const args = resolverMeta.fields.find((f) => f.name === "args")!;
-            const ret = resolverMeta.fields.find((f) => f.name === "return")!;
+            const args = resolverMeta.fields.find((f) => f.name === "args");
+            const ret = resolverMeta.fields.find((f) => f.name === "return");
+
+            if (!args || !ret) {
+                console.error(
+                    `Resolver ${resolverName} has no args or return type, there's something going veery wrong here!`,
+                );
+                continue;
+            }
+
             const __typename = resolverMeta.fields.find(
                 (f) => f.name === "__typename",
             );
@@ -243,7 +262,7 @@ export const gatherMeta = (
                     .getDocumentationComment(checker)
                     .map((part) => part.text)
                     .join(""),
-                args: args.type.fields,
+                args: args?.type.fields ?? [],
                 type: ret.type,
             });
         }
@@ -508,6 +527,7 @@ const renameToProtocolFriendlyName = (
     );
 
     if (!name.match(regex) && !name.match(importsRegex)) return undefined;
+    name = name.replaceAll("[]", "Array");
 
     if (name.matchAll(importsRegex).toArray().length > 0) {
         name = name.replaceAll(importsRegex, "");
@@ -717,7 +737,7 @@ export const gatherMetaForType = (
             return true;
         });
 
-        if (_tsType.types.length === 1) {
+        if (_tsType.types.length === 1 || isUnionWithLengthOne) {
             tsType = _tsType.types[0];
         }
 
@@ -1393,14 +1413,24 @@ export const gatherMetaForType = (
     } else if (tsType.isStringLiteral()) {
         const name = tsType.value;
 
-        meta.isEnum = true;
-        meta.enumValues = [
-            {
-                name,
-                description: `The value of the string literal ${meta.tsTypeName}`,
-                type: meta,
-            },
-        ];
+        const renamedName = renameToProtocolFriendlyName(name);
+        if (renamedName) {
+            // if the name had to be renamed, it's not valid as an enum member name
+            // so we'll use a custom scalar instead
+            meta.isEnum = false;
+            meta.isScalar = true;
+            meta.scalarTSType = `"${name}"`;
+            meta.scalarTSTypeIsFinal = true;
+        } else {
+            meta.isEnum = true;
+            meta.enumValues = [
+                {
+                    name,
+                    description: `The value of the string literal ${meta.tsTypeName}`,
+                    type: meta,
+                },
+            ];
+        }
     }
 
     meta.isScalar =

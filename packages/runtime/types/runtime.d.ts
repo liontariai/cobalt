@@ -10,41 +10,44 @@ type DeepUnpackPromises<T> = T extends (...args: infer A) => infer R
 
 type CobaltGlobalObject = {
     __cobalt: {
-        // auth:
-        //     | {
-        //           oauth: undefined;
-        //           cobalt: {
-        //               oauth: import(".cobalt/auth/oauth").client;
-        //               sdk: typeof import(".cobalt/auth/sdk").default;
-        //           };
-        //       }
-        //     | {
-        //           oauth: string | {};
-        //           cobalt: undefined;
-        //       };
+        auth:
+            | {
+                  oauth: undefined;
+                  cobalt: {
+                      oauth: import(".cobalt/auth/oauth").client;
+                      sdk: typeof import(".cobalt/auth/sdk").default;
+                  };
+              }
+            | {
+                  oauth: string | {};
+                  cobalt: undefined;
+              };
     };
 };
-declare type CobaltCtxFactory = <CTX extends object>(args: {
-    // oauth: import(".cobalt/auth/oauth").client;
+declare type CobaltCtxInput = {
+    oauth?: import(".cobalt/auth/oauth").client;
     headers: Headers;
-}) => CTX;
+};
+declare type CobaltCtxFactory = <CTX extends object>(
+    args: CobaltCtxInput,
+) => CTX;
 
-// declare const $$use: <FuncOrObject>(
-//     fn: FuncOrObject,
-// ) => DeepUnpackPromises<FuncOrObject>;
+declare const $$use: <FuncOrObject>(
+    fn: FuncOrObject,
+) => DeepUnpackPromises<FuncOrObject>;
 
-// declare const $$auth: (that: any) => {
-//     token: {
-//         aud: string;
-//         subject: {
-//             type: keyof import(".cobalt/auth/oauth").__Subjects__;
-//             properties: import(".cobalt/auth/oauth").__Subjects__[keyof import(".cobalt/auth/oauth").__Subjects__];
-//         };
-//     };
-// } & Pick<(typeof import(".cobalt/auth/sdk"))["default"], "query" | "mutation">;
+declare const $$auth: (that: any) => {
+    token: {
+        aud: string;
+        subject: {
+            type: keyof import(".cobalt/auth/oauth").__Subjects__;
+            properties: import(".cobalt/auth/oauth").__Subjects__[keyof import(".cobalt/auth/oauth").__Subjects__];
+        };
+    };
+} & Pick<(typeof import(".cobalt/auth/sdk"))["default"], "query" | "mutation">;
 
 declare const $$ctx: (that: any) => {
-    // $$auth: ReturnType<typeof $$auth>;
+    $$auth: ReturnType<typeof $$auth>;
 } & Awaited<ReturnType<typeof import("$$ctx").default>>;
 
 declare const $$root: {
