@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/auth",
-    "version": "0.5.0-alpha.2",
+    "version": "0.5.0-alpha.5",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "type": "module",
@@ -8,10 +8,14 @@
     "files": [
         "dist/**/*",
         "src/**/*.ts",
+        "src/**/*.zmodel",
         "!dist/**/__tests__/*",
         "!src/**/__tests__/*",
         "README.md",
-        "package.json"
+        "package.json",
+        "prisma.config.ts",
+        "tsconfig.json",
+        ".env.public"
     ],
     "publishConfig": {
         "access": "public",
@@ -36,9 +40,7 @@
         "@types/aws-lambda": "8.10.147",
         "@types/bun": "latest",
         "@types/node": "latest",
-        "prettier": "latest",
-        "prisma": "~6.10.0",
-        "zenstack": "~2.16.1"
+        "prettier": "latest"
     },
     "peerDependencies": {
         "typescript": "~5.7.3"
@@ -56,7 +58,10 @@
         "@samarium.sdk/make": "^0.24.0",
         "@zenstackhq/runtime": "~2.16.1",
         "@zenstackhq/sdk": "~2.16.1",
+        "dotenv": "^17.2.0",
         "pglite-prisma-adapter": "^0.6.1",
-        "sst": "3.9.20"
+        "prisma": "~6.10.0",
+        "sst": "3.9.20",
+        "zenstack": "~2.16.1"
     }
 }

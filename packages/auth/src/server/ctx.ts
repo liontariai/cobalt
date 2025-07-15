@@ -5,6 +5,9 @@ import type { PrismaClient } from "./db/zenstack/models";
 import { PrismaClient as PPrismaClient } from "./db/schema/@prisma/client/client";
 import { enhance } from "./db/zenstack/enhance";
 
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.public" });
+
 const client = new PGlite(
     process.env.COBALT_AUTH_DATABASE_URL! || process.env.DATABASE_URL!,
 );
