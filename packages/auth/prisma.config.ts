@@ -3,7 +3,8 @@ import path from "node:path";
 import type { PrismaConfig } from "prisma";
 import { PGlite } from "@electric-sql/pglite";
 import { PrismaPGlite } from "pglite-prisma-adapter";
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.public" });
 
 type Env = {
     DATABASE_URL?: string;
