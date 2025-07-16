@@ -24,9 +24,23 @@ export const startCommand = (program: Command) => {
                 process.exit(1);
             }
 
+            // Check if Bun is installed
+            let runner = "node";
+            try {
+                const bunCheck = spawnSync("bun", ["--version"], {
+                    stdio: "ignore",
+                });
+                if (bunCheck.status === 0) {
+                    runner = "bun";
+                }
+            } catch (e) {
+                // bun not installed, fallback to node
+            }
+
             // start the server
-            spawnSync("node", [serverPath, "--port", port], {
+            spawnSync(runner, [serverPath, "--port", port], {
                 stdio: "inherit",
+                cwd: path.dirname(serverPath),
             });
         });
 
