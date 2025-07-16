@@ -35,7 +35,7 @@ if (!_cobaltAuth) {
     };
 }
 
-const port = process.env.PORT || 4000;
+const port = process.env.COBALT_PORT || process.env.PORT || 4000;
 
 const gqlSchema = makeExecutableSchema({
     typeDefs: schema,
