@@ -3,7 +3,7 @@
 import { Command } from "commander";
 import { resolve } from "./shared";
 import path from "path";
-import { spawnSync } from "child_process";
+import { $ } from "bun";
 
 export const startCommand = (program: Command) => {
     const startCmd = program
@@ -24,23 +24,9 @@ export const startCommand = (program: Command) => {
                 process.exit(1);
             }
 
-            // Check if Bun is installed
-            let runner = "node";
-            try {
-                const bunCheck = spawnSync("bun", ["--version"], {
-                    stdio: "ignore",
-                });
-                if (bunCheck.status === 0) {
-                    runner = "bun";
-                }
-            } catch (e) {
-                // bun not installed, fallback to node
-            }
-
             // start the server
-            spawnSync(runner, [serverPath, "--port", port], {
-                stdio: "inherit",
-                cwd: path.dirname(serverPath),
+            $`bun run ${serverPath} --port ${port}`.env({
+                ...(process.env as Record<string, string>),
             });
         });
 

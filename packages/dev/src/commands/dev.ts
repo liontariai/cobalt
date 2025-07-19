@@ -8,8 +8,10 @@ import { createHandler } from "graphql-sse/lib/use/fetch";
 // strange work around
 import { makeGraphQLHandler } from "../util-2";
 
-import { initializeAndCompile, resolve } from "./shared";
+import { findOperationsDir, initializeAndCompile, resolve } from "./shared";
 import path from "path";
+import { watch } from "fs/promises";
+import type { Server } from "bun";
 
 export const devCommand = (program: Command) => {
     const devCmd = program
@@ -20,99 +22,122 @@ export const devCommand = (program: Command) => {
         .option("--gql", "Use GraphQL", true)
         .option("--rest", "Use REST", false)
         .option("-p, --port <port>", "Port to run the server on", "4000")
-        .option("-w, --watch", "Watch for changes and restart the server")
         .option("--pretty", "Format the output graphql/openapi schema", true)
         .action(async (options) => {
-            const {
-                operationsDir,
-                ctxFile,
-                gqlSchema,
-                writeSchemaOut,
-                // writeResolversOut,
-                writeTypesOut,
-                writeSdkOut,
-            } = await initializeAndCompile(options);
-
-            await Promise.all([
-                writeSchemaOut(),
-                // writeResolversOut(),
-                writeTypesOut(),
-                writeSdkOut(),
-            ]);
-
-            let authserver:
-                | import("hono/tiny").Hono<
-                      {
-                          Variables: {
-                              authorization: AuthorizationState;
-                          };
-                      },
-                      {},
-                      "/auth"
-                  >
-                | undefined;
-            let cobaltAuth: CobaltAuthConfig["issuer"];
-
-            const authConfigFile =
-                resolve(path.join(operationsDir, "..", "auth.ts")) ||
-                resolve(path.join(operationsDir, "..", "auth.dev.ts"));
-
-            if (!authConfigFile) {
-                console.log(
-                    "No `auth.ts` found. No authentication configured.",
+            const dir = findOperationsDir(options.dir);
+            if (!dir) {
+                console.error(
+                    `Directory (${options.dir}) not found, could not find operations.`,
                 );
-            } else {
-                process.env.buildtime = "true";
-                process.env.authconfigfilepath = authConfigFile!;
-                const authConfig = (await import(authConfigFile!))
-                    .default as CobaltAuthConfig;
-
-                const {
-                    issuer: { cobalt },
-                } = authConfig;
-
-                cobaltAuth = {
-                    oauth: undefined,
-                    cobalt: (await Promise.resolve(cobalt))!,
-                };
-                authserver = cobaltAuth?.cobalt?.authserver;
+                process.exit(1);
             }
 
-            const ctx = (await import(ctxFile)).default as CobaltCtxFactory;
-            const ctxFactory = async (req: Request) => ({
-                headers: req.headers,
-                __cobalt: {
-                    auth: cobaltAuth,
-                },
-                ...(await ctx({
-                    oauth: cobaltAuth?.cobalt?.oauth,
-                    headers: req.headers as any,
-                })),
-            });
+            const serverDir = path.resolve(dir!, "..");
 
-            const sse = createHandler({
-                schema: gqlSchema,
-                context: ctxFactory as any,
-            });
-            const graphqlHandler = makeGraphQLHandler(
-                gqlSchema,
-                ctxFactory as any,
-            );
+            const startDev = async (prevServer?: Server) => {
+                let {
+                    operationsDir,
+                    ctxFile,
+                    gqlSchema,
+                    writeSchemaOut,
+                    writeTypesOut,
+                    writeSdkOut,
+                } = await initializeAndCompile(options);
 
-            const corsifyHeaders = (headers?: Headers) => {
-                return {
-                    ...Object.entries(headers ?? {}),
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                    "Access-Control-Allow-Headers":
-                        "Content-Type, Authorization",
+                await Promise.all([
+                    writeSchemaOut(),
+                    writeTypesOut(),
+                    writeSdkOut(),
+                ]);
+
+                let authserver:
+                    | import("hono/tiny").Hono<
+                          {
+                              Variables: {
+                                  authorization: AuthorizationState;
+                              };
+                          },
+                          {},
+                          "/auth"
+                      >
+                    | undefined;
+                let cobaltAuth: CobaltAuthConfig["issuer"];
+
+                const authConfigFile =
+                    resolve(path.join(operationsDir, "..", "auth.ts")) ||
+                    resolve(path.join(operationsDir, "..", "auth.dev.ts"));
+
+                if (!authConfigFile) {
+                    console.log(
+                        "No `auth.ts` found. No authentication configured.",
+                    );
+                } else {
+                    process.env.buildtime = "true";
+                    process.env.authconfigfilepath = authConfigFile!;
+
+                    if (require.cache[authConfigFile!]) {
+                        delete require.cache[authConfigFile!];
+                    }
+                    const authConfig = (
+                        require(authConfigFile!) as {
+                            default: CobaltAuthConfig;
+                        }
+                    ).default;
+
+                    const {
+                        issuer: { cobalt },
+                    } = authConfig;
+
+                    cobaltAuth = {
+                        oauth: undefined,
+                        cobalt: (await Promise.resolve(cobalt))!,
+                    };
+                    authserver = cobaltAuth?.cobalt?.authserver;
+                }
+
+                if (require.cache[ctxFile]) {
+                    delete require.cache[ctxFile];
+                }
+                const ctx = (
+                    require(ctxFile) as {
+                        default: CobaltCtxFactory;
+                    }
+                ).default;
+
+                const ctxFactory = async (req: Request) => ({
+                    headers: req.headers,
+                    __cobalt: {
+                        auth: cobaltAuth,
+                    },
+                    ...(await ctx({
+                        oauth: cobaltAuth?.cobalt?.oauth,
+                        headers: req.headers as any,
+                    })),
+                });
+
+                const sse = createHandler({
+                    schema: gqlSchema,
+                    context: ctxFactory as any,
+                });
+                const graphqlHandler = makeGraphQLHandler(
+                    gqlSchema,
+                    ctxFactory as any,
+                );
+
+                const corsifyHeaders = (headers?: Headers) => {
+                    return {
+                        ...Object.entries(headers ?? {}),
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                        "Access-Control-Allow-Headers":
+                            "Content-Type, Authorization",
+                    };
                 };
-            };
 
-            const httpServer = Bun.serve({
-                port: +options.port,
-                idleTimeout: 0,
-                fetch: async (req, httpserver) => {
+                const fetchFn: (
+                    this: Server,
+                    req: Request,
+                ) => Promise<Response> = async (req) => {
                     const path = new URL(req.url).pathname;
                     // handle cors
                     if (req.method === "OPTIONS") {
@@ -161,10 +186,45 @@ export const devCommand = (program: Command) => {
                     }
 
                     return new Response("Not Found", { status: 404 });
-                },
-            });
+                };
 
-            console.log(`🚀  Server ready at: ${httpServer.url}`);
+                if (prevServer) {
+                    prevServer.reload({
+                        fetch: fetchFn,
+                    });
+                } else {
+                    const httpServer = Bun.serve({
+                        port: +options.port,
+                        idleTimeout: 0,
+                        fetch: fetchFn,
+                    });
+                    console.log(`🚀  Server ready at: ${httpServer.url}`);
+                    return httpServer;
+                }
+
+                return prevServer;
+            };
+
+            let httpServer: Server | undefined;
+            httpServer = await startDev();
+            console.log("🔍 Watching for changes...");
+
+            const watcher = watch(serverDir, { recursive: true });
+            for await (const event of watcher) {
+                if (event.filename) {
+                    console.log(
+                        `🔍 Detected ${event.eventType} in ${event.filename}`,
+                    );
+                    const changedFile = Bun.resolveSync(
+                        `./${event.filename}`,
+                        serverDir,
+                    );
+                    if (require.cache[changedFile]) {
+                        delete require.cache[changedFile];
+                    }
+                }
+                httpServer = await startDev(httpServer);
+            }
         });
 
     return devCmd;

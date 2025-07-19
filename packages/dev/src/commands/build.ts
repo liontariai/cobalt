@@ -116,6 +116,12 @@ export const buildCommand = (program: Command) => {
             writeFile(path.join(outDir, "server.ts"), serverCodePatched);
             writeFile(path.join(outDir, "util.ts"), server_util_code_as_string);
 
+            const usesCobaltAuth =
+                Object.keys(
+                    require(path.join(process.cwd(), "package.json"))
+                        .dependencies,
+                ).find((dep) => dep === "@cobalt27/auth") !== undefined;
+
             await Bun.build({
                 entrypoints: [path.join(outDir, "server.ts")],
                 outdir: outDir,
@@ -132,6 +138,17 @@ export const buildCommand = (program: Command) => {
                             ].includes(dep),
                     )
                     .concat([
+                        ...(usesCobaltAuth
+                            ? [
+                                  "@cobalt27/auth",
+                                  "@openauthjs/openauth",
+                                  ".cobalt/auth/oauth",
+                                  ".cobalt/auth/sdk",
+                                  "@standard-schema/spec",
+                                  "aws4fetch",
+                                  "jose",
+                              ]
+                            : []),
                         "graphql",
                         "graphql-sse",
                         "@graphql-tools/schema",
@@ -145,12 +162,6 @@ export const buildCommand = (program: Command) => {
             removeFile(path.join(outDir, "util.ts"));
 
             if (options.docker) {
-                const usesCobaltAuth =
-                    Object.keys(
-                        require(path.join(process.cwd(), "package.json"))
-                            .dependencies,
-                    ).find((dep) => dep === "@cobalt27/auth") !== undefined;
-
                 // Create package.json for production
                 const productionPackageJson = {
                     name: require(path.join(process.cwd(), "package.json"))
