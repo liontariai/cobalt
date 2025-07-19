@@ -39,6 +39,18 @@ export const removeFile = (filePath: string) => {
     }
 };
 
+export const findOperationsDir = (dir: string) => {
+    const searchDirs = [
+        dir || "operations",
+        `src/${dir || "operations"}`,
+        `server/${dir || "operations"}`,
+        `src/server/${dir || "operations"}`,
+    ];
+
+    const operationsDir = searchDirs.find((dir) => resolve(dir));
+    return operationsDir;
+};
+
 export const initializeAndCompile = async (
     options: {
         dir: string;
@@ -109,11 +121,10 @@ export const initializeAndCompile = async (
             schema,
         );
     };
+
+    const resolversPath = resolve("./.cobalt/resolvers.ts", false)!;
     // const writeResolversOut = async () => {
-    await Bun.write(
-        Bun.file(resolve("./.cobalt/resolvers.ts", false)!),
-        entrypoint,
-    );
+    await Bun.write(Bun.file(resolversPath), entrypoint);
     // };
 
     const writeTypesOut = async () => {
@@ -127,10 +138,14 @@ export const initializeAndCompile = async (
 
     let gqlSchema;
     try {
+        if (require.cache[resolversPath]) {
+            delete require.cache[resolversPath];
+        }
+
         gqlSchema = makeExecutableSchema({
             typeDefs: schema,
             resolvers: {
-                ...require(resolve("./.cobalt/resolvers.ts", false)!),
+                ...require(resolversPath),
             },
         });
 
@@ -160,7 +175,7 @@ export const initializeAndCompile = async (
             .replaceAll("[ENDPOINT]", `http://localhost:${port}/graphql`);
 
         const writeSdkOut = async () => {
-            Bun.write(Bun.file(sdkout), sdkContent);
+            await Bun.write(Bun.file(sdkout), sdkContent);
         };
 
         return {
