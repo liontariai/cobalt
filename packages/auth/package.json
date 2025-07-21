@@ -36,7 +36,7 @@
     },
     "devDependencies": {
         "@cobalt27/dev": "workspace:*",
-        "@samarium.sdk/new": "^0.24.1",
+        "@samarium.sdk/new": "^0.24.2",
         "@types/aws-lambda": "8.10.147",
         "@types/bun": "latest",
         "@types/node": "latest",
@@ -55,7 +55,7 @@
         "@electric-sql/pglite": "^0.3.4",
         "@openauthjs/openauth": "^0.4.3",
         "@prisma/client": "~6.10.0",
-        "@samarium.sdk/make": "^0.24.1",
+        "@samarium.sdk/make": "^0.24.2",
         "@zenstackhq/runtime": "~2.16.1",
         "@zenstackhq/sdk": "~2.16.1",
         "dotenv": "^17.2.0",
