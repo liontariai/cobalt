@@ -153,9 +153,14 @@ export const buildCommand = (program: Command) => {
                         "graphql-sse",
                         "@graphql-tools/schema",
                     ]),
-                target: "node",
+                target: "bun",
                 // minify: true,
                 sourcemap: "external",
+            }).then((output) => {
+                // write "#!/usr/bin/env bun" to the top of the file
+                const file = path.join(output.outputs[0].path);
+                const content = fs.readFileSync(file, "utf8");
+                fs.writeFileSync(file, "#!/usr/bin/env bun\n" + content);
             });
 
             removeFile(path.join(outDir, "server.ts"));
