@@ -9,6 +9,7 @@ import {
     resolve,
 } from "./shared";
 import path from "path";
+import fs from "fs";
 
 // @ts-ignore
 import server_code_as_string from "../server.ts" with { type: "text" };
@@ -109,6 +110,16 @@ export const buildCommand = (program: Command) => {
                     .replaceAll(
                         "process.env.COBALT_AUTH_PATH",
                         `"${path.relative(outDir, authFile)}"`,
+                    );
+            } else {
+                serverCodePatched = serverCodePatched
+                    .replace(
+                        `let _cobaltAuth: any;`,
+                        `let _cobaltAuth = undefined;`,
+                    )
+                    .replace(
+                        `require(process.env.COBALT_AUTH_PATH!);`,
+                        `undefined;`,
                     );
             }
 
@@ -319,7 +330,7 @@ ${prismaSchemaDirRelative ? `COPY --from=builder /app/${prismaSchemaDirRelative}
 ${prismaConfigPathRelative ? `COPY --from=builder /app/${prismaConfigPathRelative} ./${prismaConfigPathRelative}` : ""}
 ${copiedEnvFile ? `COPY --from=builder /app/.env ./.env` : ""}
 
-${usesCobaltAuth ? `ENV OPENAUTH_ISSUER=http://localhost:4000` : ""}
+${usesCobaltAuth ? `ENV OPENAUTH_ISSUER=\${OPENAUTH_ISSUER:-http://localhost:4000}` : ""}
 
 EXPOSE 4000
 CMD ["bun", "cobalt:server"]
