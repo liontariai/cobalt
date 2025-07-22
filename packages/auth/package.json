@@ -55,7 +55,7 @@
         "@electric-sql/pglite": "^0.3.4",
         "@openauthjs/openauth": "^0.4.3",
         "@prisma/client": "~6.10.0",
-        "@samarium.sdk/make": "^0.24.2",
+        "@samarium.sdk/make": "^0.24.3",
         "@zenstackhq/runtime": "~2.16.1",
         "@zenstackhq/sdk": "~2.16.1",
         "dotenv": "^17.2.0",
