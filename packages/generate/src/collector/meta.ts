@@ -22,6 +22,11 @@ export {
 import fs from "fs";
 import { Glob } from "bun";
 import { createProgram } from "./util";
+import {
+    addNewEntriesOnly,
+    parseTypeString,
+    type ParsedTypeStringMetadata,
+} from "./parser";
 
 const camelCase = (parts: string[]) => {
     return parts
@@ -698,12 +703,14 @@ export const gatherMetaForType = (
     tsTypeAndSymbol: {
         type: ts.Type;
         symbol?: ts.Symbol;
+        overrideIsNonNull?: boolean;
     },
     program: { checker: ts.TypeChecker; sourceFile: ts.SourceFile },
     collector: Collector,
     collectRenamedTypes: Map<string, string>,
     path: string[],
     parentType?: TypeMeta,
+    collectOuterTypeMetadata?: Map<string, ParsedTypeStringMetadata>,
 ): TypeMeta => {
     const { type: _tsType, symbol } = tsTypeAndSymbol;
 
@@ -716,16 +723,8 @@ export const gatherMetaForType = (
         // so we can get the valueDeclaration from the symbol of the NodeObject in declarations[0]
         (symbol?.declarations?.[0] as unknown as ts.Type)?.symbol
             ?.valueDeclaration;
-    let overrideIsNonNull = undefined;
+    let overrideIsNonNull = tsTypeAndSymbol.overrideIsNonNull ?? undefined;
     if (_tsType.isUnion()) {
-        // strangely we end up here with union types that only have one possible type
-        // that means that 'undefined' does not show up in the union
-        // but it comes probably from optionals
-        const isUnionWithLengthOne = _tsType.types.length === 1;
-        // ||
-        // (program.checker.typeToString(_tsType) === "boolean" &&
-        //     _tsType.types.length === 2);
-
         _tsType.types = _tsType.types.filter((t, i, arr) => {
             const isNullOrUndefined =
                 (t.flags & ts.TypeFlags.Null) !== 0 ||
@@ -737,17 +736,14 @@ export const gatherMetaForType = (
             return true;
         });
 
-        if (_tsType.types.length === 1 || isUnionWithLengthOne) {
+        if (_tsType.types.length === 1) {
             tsType = _tsType.types[0];
-        }
-
-        if (isUnionWithLengthOne) {
-            overrideIsNonNull = false;
         }
     }
 
     let removeUndefinedFromTypeNameBcItComesFromOptional = false;
     if (
+        tsTypeAndSymbol.overrideIsNonNull === undefined &&
         declaration &&
         "questionToken" in declaration &&
         declaration.questionToken
@@ -854,6 +850,8 @@ export const gatherMetaForType = (
                 collector,
                 collectRenamedTypes,
                 [...path],
+                undefined,
+                collectOuterTypeMetadata,
             );
             const depth = (meta.isList += arraymeta?.isList ?? 0);
             const newmeta = {
@@ -905,6 +903,7 @@ export const gatherMetaForType = (
                     collectRenamedTypes,
                     literalMetaPath,
                     meta,
+                    collectOuterTypeMetadata,
                 );
                 collector.removeType(literalMeta.name);
                 collector.removeTypeReference(
@@ -945,6 +944,7 @@ export const gatherMetaForType = (
                                                     t.symbol?.name,
                                             ].filter(Boolean) as string[],
                                             meta,
+                                            collectOuterTypeMetadata,
                                         );
 
                                         return unionMeta.tsTypeName;
@@ -1035,6 +1035,7 @@ export const gatherMetaForType = (
                         t.aliasSymbol?.escapedName ?? t.symbol?.name,
                     ].filter(Boolean) as string[],
                     meta,
+                    collectOuterTypeMetadata,
                 );
 
                 if (unionTypeIsList && unionMeta.isList !== unionTypeIsList) {
@@ -1083,6 +1084,8 @@ export const gatherMetaForType = (
                     collector,
                     collectRenamedTypes,
                     singleTypeNameArr.filter(Boolean),
+                    undefined,
+                    collectOuterTypeMetadata,
                 );
 
                 meta.name = singleType.name;
@@ -1111,6 +1114,7 @@ export const gatherMetaForType = (
                     Boolean,
                 ) as string[],
                 meta,
+                collectOuterTypeMetadata,
             );
         });
     } else if (tsType.isClassOrInterface()) {
@@ -1132,6 +1136,7 @@ export const gatherMetaForType = (
                             t.aliasSymbol?.escapedName ?? t.symbol?.name,
                         ].filter(Boolean) as string[],
                         meta,
+                        collectOuterTypeMetadata,
                     );
                 },
             );
@@ -1149,6 +1154,7 @@ export const gatherMetaForType = (
                 collectRenamedTypes,
                 [...path, i.toString()].filter(Boolean) as string[],
                 meta,
+                collectOuterTypeMetadata,
             );
 
             if ("labeledElementDeclarations" in tupleTypeTarget) {
@@ -1184,6 +1190,19 @@ export const gatherMetaForType = (
         meta.isObject = !meta.isInput;
         const fields: FieldMeta[] = [];
 
+        const outerTypeMetadata = addNewEntriesOnly(
+            collectOuterTypeMetadata ?? new Map(),
+            parseTypeString(
+                program.checker.typeToString(
+                    tsType,
+                    undefined,
+                    ts.TypeFormatFlags.InTypeAlias |
+                        ts.TypeFormatFlags.NoTruncation,
+                ),
+                `${path.length === 1 ? path.join(".") : name}.`,
+            ),
+        );
+
         // Get properties including those from base types
         const properties = tsType.getProperties();
         properties.forEach((prop) => {
@@ -1218,15 +1237,29 @@ export const gatherMetaForType = (
                 );
             }
 
+            let overrideIsNonNull = undefined;
+            const metadataFromOuterType = outerTypeMetadata.get(
+                `${path.length === 1 ? path.join(".") : name}.${prop.name}`,
+            );
+            if (metadataFromOuterType) {
+                if (
+                    metadataFromOuterType.isOptional ||
+                    metadataFromOuterType.canBeUndefined
+                ) {
+                    overrideIsNonNull = false;
+                }
+            }
+
             fields.push(
                 gatherMetaForField(
                     makeProtocolFriendlyName(prop.name, collectRenamedTypes),
-                    { type: propType, symbol: prop },
+                    { type: propType, symbol: prop, overrideIsNonNull },
                     program,
                     collector,
                     collectRenamedTypes,
                     [...path, prop.name],
                     meta,
+                    outerTypeMetadata,
                 ),
             );
 
@@ -1255,6 +1288,7 @@ export const gatherMetaForType = (
                         collectRenamedTypes,
                         [...path, prop.name],
                         meta,
+                        collectOuterTypeMetadata,
                     );
 
                     // Process parameter types
@@ -1272,6 +1306,7 @@ export const gatherMetaForType = (
                             collectRenamedTypes,
                             [...path, prop.name],
                             meta,
+                            collectOuterTypeMetadata,
                         );
                     });
 
@@ -1288,6 +1323,7 @@ export const gatherMetaForType = (
                             collectRenamedTypes,
                             [...path, prop.name],
                             meta,
+                            collectOuterTypeMetadata,
                         );
                     });
                 });
@@ -1317,6 +1353,7 @@ export const gatherMetaForType = (
                 collectRenamedTypes,
                 [...path, "[number]"],
                 meta,
+                collectOuterTypeMetadata,
             );
         }
 
@@ -1336,6 +1373,7 @@ export const gatherMetaForType = (
                 collectRenamedTypes,
                 [...path, "[string]"],
                 meta,
+                collectOuterTypeMetadata,
             );
         }
 
@@ -1356,6 +1394,7 @@ export const gatherMetaForType = (
                 collectRenamedTypes,
                 [...path, "(call)"],
                 meta,
+                collectOuterTypeMetadata,
             );
 
             sig.parameters.forEach((param) => {
@@ -1371,6 +1410,7 @@ export const gatherMetaForType = (
                     collectRenamedTypes,
                     [...path, "(call)", param.name],
                     meta,
+                    collectOuterTypeMetadata,
                 );
             });
         });
@@ -1392,6 +1432,7 @@ export const gatherMetaForType = (
                 collectRenamedTypes,
                 [...path, "(construct)"],
                 meta,
+                collectOuterTypeMetadata,
             );
 
             sig.parameters.forEach((param) => {
@@ -1407,6 +1448,7 @@ export const gatherMetaForType = (
                     collectRenamedTypes,
                     [...path, "(construct)", param.name],
                     meta,
+                    collectOuterTypeMetadata,
                 );
             });
         });
@@ -1458,12 +1500,14 @@ export const gatherMetaForField = (
     fieldTypeAndSymbol: {
         type: ts.Type;
         symbol?: ts.Symbol;
+        overrideIsNonNull?: boolean;
     },
     program: { checker: ts.TypeChecker; sourceFile: ts.SourceFile },
     collector: Collector,
     collectRenamedTypes: Map<string, string>,
     path: string[],
     parentType?: TypeMeta,
+    collectOuterTypeMetadata?: Map<string, ParsedTypeStringMetadata>,
 ): FieldMeta => {
     const { type: fieldType } = fieldTypeAndSymbol;
     return {
@@ -1480,6 +1524,7 @@ export const gatherMetaForField = (
             collectRenamedTypes,
             path,
             parentType,
+            collectOuterTypeMetadata,
         ),
     };
 };
