@@ -109,26 +109,16 @@ export const makeIdentityManagementPlatform = async ({
         import dotenv from "dotenv";
         dotenv.config({ path: ".env.public" });
 
-        type Env = {
-            COBALT_AUTH_DATABASE_URL?: string;
-        };
-
         export default {
-            earlyAccess: true,
+            experimental: {
+                adapter: true,
+            },
             schema: path.join("server", "db", "schema", "prisma", "schema.prisma"),
-            migrate: {
-                async adapter(env) {
-                    const client = new PGlite({ dataDir: env.COBALT_AUTH_DATABASE_URL });
-                    return new PrismaPGlite(client);
-                },
+            adapter: async () => {
+                const client = new PGlite({ dataDir: process.env.COBALT_AUTH_DATABASE_URL });
+                return new PrismaPGlite(client);
             },
-            studio: {
-                async adapter(env) {
-                    const client = new PGlite({ dataDir: env.COBALT_AUTH_DATABASE_URL });
-                    return new PrismaPGlite(client);
-                },
-            },
-        } satisfies PrismaConfig<Env>;
+        } satisfies PrismaConfig;
         `,
     );
 
