@@ -1,17 +1,15 @@
+import fs from "fs";
 import path from "path";
 import { Hono } from "hono/tiny";
 
 import { Generator } from "@cobalt27/generate";
 import { makeExecutableSchema } from "@graphql-tools/schema";
-import {
-    ApolloServer,
-    HeaderMap,
-    type HTTPGraphQLRequest,
-} from "@apollo/server";
-
 import { GraphQLGenerator, Flavors } from "@samarium.sdk/make";
 import { findNodeModulesDir } from "./helpers";
 import type { makeOpenAuthClient } from "./openauth";
+
+import { createHandler } from "graphql-sse/lib/use/fetch";
+import { makeGraphQLHandler } from "./graphql-util";
 
 export const generateSmCoAppFromOperations = async (operationsDir: string) => {
     const generator = new Generator();
@@ -22,21 +20,19 @@ export const generateSmCoAppFromOperations = async (operationsDir: string) => {
     const ctxfile = path.resolve(operationsDir, "..", "ctx.ts");
 
     const resolversfile = path.join(cobaltAuthDir, "resolvers.ts");
-    await Bun.write(Bun.file(resolversfile), entrypoint);
+    fs.writeFileSync(resolversfile, entrypoint);
 
+    fs.mkdirSync(path.join(cobaltAuthDir, "server", "$$types"), {
+        recursive: true,
+    });
     for (const [fname, fcontent] of Object.entries(tsTypes)) {
-        await Bun.write(
-            Bun.file(
-                path.join(cobaltAuthDir, "server", "$$types", `${fname}.ts`),
-            ),
+        fs.writeFileSync(
+            path.join(cobaltAuthDir, "server", "$$types", `${fname}.ts`),
             fcontent,
         );
     }
 
-    await Bun.write(
-        Bun.file(path.join(cobaltAuthDir, "schema.graphql")),
-        schema,
-    );
+    fs.writeFileSync(path.join(cobaltAuthDir, "schema.graphql"), schema);
 
     const gqlSchema = makeExecutableSchema({
         typeDefs: schema,
@@ -55,76 +51,120 @@ export const generateSmCoAppFromOperations = async (operationsDir: string) => {
 
     const sdkfile = path.join(cobaltAuthDir, "sdk.ts");
 
-    await Bun.write(
-        Bun.file(sdkfile),
+    fs.writeFileSync(
+        sdkfile,
         sdk
             .replaceAll("[AUTH_HEADER_NAME]", "Authorization")
             .replaceAll("[ENDPOINT]", `http://localhost:4000/graphql`),
     );
 
-    const server = new ApolloServer({
-        schema: gqlSchema,
-    });
-    await server.start();
-
     const makeHonoProxy = (
         openauthClient: Awaited<ReturnType<typeof makeOpenAuthClient>>,
     ) => {
-        const hono = new Hono();
-        hono.use("/graphql", async (c) => {
-            const headers = new Headers([["Content-Type", "application/json"]]);
-            for (const [key, value] of Object.entries(
-                c.req.raw.headers.toJSON(),
-            )) {
-                if (value !== undefined) {
-                    headers.set(
-                        key.toLowerCase(),
-                        Array.isArray(value) ? value.join(", ") : value,
-                    );
-                }
-            }
-            const body = await c.req.json();
-            const httpGraphQLRequest: HTTPGraphQLRequest = {
-                method: c.req.method.toUpperCase(),
-                headers: headers as unknown as HeaderMap,
-                search: new URL(c.req.raw.url).search ?? "",
-                body,
-            };
-            const result = await server.executeHTTPGraphQLRequest({
-                httpGraphQLRequest,
-                context: async () => ({
-                    headers: c.req.raw.headers,
-                    __cobalt: {
-                        auth: {},
-                    },
-                    ...(await require(ctxfile).default({
-                        oauth: openauthClient,
-                        headers: c.req.raw.headers,
-                    })),
-                }),
-            });
-
-            let response: Response;
-            if (result.body.kind === "complete") {
-                response = new Response(result.body.string, {
-                    status: result.status || 200,
-                    headers: Object.fromEntries(result.headers.entries()),
-                });
-            } else {
-                const resultBody = result.body.asyncIterator;
-                response = new Response({
-                    [Symbol.asyncIterator]: async function* () {
-                        for await (const chunk of resultBody) {
-                            yield chunk;
-                        }
-                    },
-                } as any);
-            }
-
-            return response;
-        });
-        return hono.fetch;
+        const hono = makeCobaltAuthServer(
+            require(resolversfile),
+            schema,
+            require(ctxfile).default as CobaltCtxFactory,
+            openauthClient,
+        );
+        return hono;
     };
 
     return { sdkfile, makeSdkFetch: makeHonoProxy };
+};
+
+export const makeCobaltAuthServer = (
+    resolvers: any,
+    schema: string,
+    ctx: CobaltCtxFactory,
+    oauth: Awaited<ReturnType<typeof makeOpenAuthClient>>,
+) => {
+    const gqlSchema = makeExecutableSchema({
+        typeDefs: schema,
+        resolvers,
+    });
+
+    const ctxFactory = async (req: Request) => ({
+        headers: req.headers,
+        __cobalt: {
+            auth: {},
+        },
+        ...(await ctx({
+            oauth: oauth as any,
+            headers: req.headers as any,
+        })),
+    });
+
+    const sse = createHandler({
+        schema: gqlSchema,
+        context: ctxFactory as any,
+    });
+    const graphqlHandler = makeGraphQLHandler(gqlSchema, ctxFactory as any);
+
+    const corsifyHeaders = (headers?: Headers) => {
+        return {
+            ...Object.entries(headers ?? {}),
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        };
+    };
+
+    const hono = new Hono();
+    hono.use("*", async (c) => {
+        const path = new URL(c.req.raw.url).pathname;
+        // handle cors
+        if (c.req.method === "OPTIONS") {
+            return new Response("OK", {
+                headers: corsifyHeaders(),
+            });
+        }
+
+        if (path === "/graphql") {
+            // handle non-sse requests
+            if (
+                !c.req.raw.headers.get("accept")?.includes("text/event-stream")
+            ) {
+                try {
+                    const resp = await graphqlHandler(c.req.raw);
+                    return new Response(resp.body, {
+                        status: resp.status || 200,
+                        headers: {
+                            ...corsifyHeaders(new Headers(resp.headers)),
+                        },
+                    });
+                } catch (e) {
+                    console.error("Error in graphqlHandler", e);
+                    return new Response("Internal Server Error", {
+                        status: 500,
+                    });
+                }
+            }
+
+            // For SSE requests, directly return the response from the SSE handler
+            // which already contains a proper streaming response
+            try {
+                const respWithStream = await sse(c.req.raw);
+                const stream = respWithStream.body as ReadableStream;
+
+                return new Response(stream, {
+                    headers: {
+                        ...corsifyHeaders(new Headers(respWithStream.headers)),
+                        "Content-Type": "text/event-stream",
+                    },
+                    status: respWithStream.status,
+                    statusText: respWithStream.statusText,
+                });
+            } catch (e) {
+                console.error("Error in sse", e);
+                return new Response("Internal Server Error", {
+                    status: 500,
+                });
+            }
+        }
+
+        return new Response("Not Found", { status: 404 });
+    });
+
+    return hono;
 };

@@ -1,9 +1,9 @@
-import type { OpenIdClaims, OpenIdProvider } from "@/db/zenstack/models";
+import type { OpenIdClaims } from "@/db/zenstack/models";
 
 export async function connectOpenId(
     user_arn: string,
-    provider: OpenIdProvider,
-    claims: OpenIdClaims[OpenIdProvider],
+    provider: keyof OpenIdClaims,
+    claims: OpenIdClaims[keyof OpenIdClaims],
     ctx: ReturnType<typeof $$ctx>,
 ) {
     const { prisma } = ctx;
@@ -21,7 +21,7 @@ export async function connectOpenId(
                 where: {
                     provider,
                     claims: {
-                        path: [provider, "sub"],
+                        path: `${provider}.sub`,
                         equals: claims.sub,
                     },
                 },

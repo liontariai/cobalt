@@ -1,12 +1,12 @@
-import type { OpenIdClaims, OpenIdProvider } from "@/db/zenstack/models";
+import type { OpenIdClaims } from "@/db/zenstack/models";
 import { getOrCreateUser } from "./password";
 import { connectOpenId } from "./openid";
 
 export async function Mutation(
     user_id: string,
-    provider: "email" | OpenIdProvider,
+    provider: "email" | keyof OpenIdClaims,
     claims: Exclude<
-        { email: string } | OpenIdClaims[OpenIdProvider],
+        { email: string } | OpenIdClaims[keyof OpenIdClaims],
         undefined | null
     >,
 ) {
