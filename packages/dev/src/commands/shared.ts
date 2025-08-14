@@ -1,10 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { $ } from "bun";
+import prettier from "prettier";
 import { Generator } from "@cobalt27/generate";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { GraphQLGenerator, Flavors } from "@samarium.sdk/make";
-import type { CobaltAuthConfig } from "@cobalt27/auth";
-import prettier from "prettier";
 
 const cwd = process.cwd();
 
@@ -50,6 +50,16 @@ export const findOperationsDir = (dir: string) => {
     const operationsDir = searchDirs.find((dir) => resolve(dir));
     return operationsDir;
 };
+export const findAuthFile = (operationsDir: string) => {
+    const searchDirs = [
+        path.join(operationsDir, "..", "auth.ts"),
+        path.join(operationsDir, "..", "auth.prod.ts"),
+        path.join(operationsDir, "..", "auth.dev.ts"),
+    ];
+
+    const authFile = searchDirs.find((dir) => resolve(dir));
+    return authFile;
+};
 
 export const initializeAndCompile = async (
     options: {
@@ -58,6 +68,7 @@ export const initializeAndCompile = async (
         sdkOut: string;
         port: number;
     },
+    initCobaltAuthFn?: (authConfigFile: string) => Promise<void>,
     silent: boolean = false,
 ) => {
     const searchDirs = [
@@ -95,6 +106,18 @@ export const initializeAndCompile = async (
         resolve(path.join(operationsDir, "..", "auth.prod.ts")) ||
         resolve(path.join(operationsDir, "..", "auth.dev.ts")) ||
         null;
+
+    if (authFile && initCobaltAuthFn) {
+        if (!silent) {
+            console.log(`🔑 Detected auth.ts file, initializing Cobalt Auth`);
+            console.log(`Initializing Cobalt Auth using ${authFile}`);
+        }
+        await initCobaltAuthFn(authFile);
+    } else if (!authFile && initCobaltAuthFn) {
+        if (!silent) {
+            console.log("No `auth.ts` found. No authentication configured.");
+        }
+    }
 
     const t1 = performance.now();
     const generator = new Generator();
@@ -199,4 +222,36 @@ export const initializeAndCompile = async (
         );
         throw e;
     }
+};
+
+export const readManifestFromBundledServer = async (serverPath: string) => {
+    const manifest = await $`bun run ${serverPath}`
+        .env({
+            OPENAUTH_ISSUER: "placeholder",
+            COBALT_DEV_RETURN_MANIFEST: "true",
+        })
+        .nothrow()
+        .quiet();
+
+    const manifestOutput = manifest?.stdout?.toString();
+    if (!manifestOutput || !manifestOutput.includes("=== BUILD MANIFEST ===")) {
+        throw new Error("No manifest output");
+    }
+    const manifestString = manifestOutput.substring(
+        manifestOutput.indexOf("=== BUILD MANIFEST ===\n") +
+            "=== BUILD MANIFEST ===\n".length,
+        manifestOutput.indexOf("=== END BUILD MANIFEST ===\n"),
+    );
+
+    return JSON.parse(manifestString) as {
+        cobalt: {
+            version: string;
+            build: {
+                operationsDir: string;
+            };
+            cobaltAuth?: {
+                version: string;
+            };
+        };
+    };
 };

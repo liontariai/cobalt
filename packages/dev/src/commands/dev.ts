@@ -35,21 +35,6 @@ export const devCommand = (program: Command) => {
             const serverDir = path.resolve(dir!, "..");
 
             const startDev = async (prevServer?: Server) => {
-                let {
-                    operationsDir,
-                    ctxFile,
-                    gqlSchema,
-                    writeSchemaOut,
-                    writeTypesOut,
-                    writeSdkOut,
-                } = await initializeAndCompile(options);
-
-                await Promise.all([
-                    writeSchemaOut(),
-                    writeTypesOut(),
-                    writeSdkOut(),
-                ]);
-
                 let authserver:
                     | import("hono/tiny").Hono<
                           {
@@ -63,37 +48,45 @@ export const devCommand = (program: Command) => {
                     | undefined;
                 let cobaltAuth: CobaltAuthConfig["issuer"];
 
-                const authConfigFile =
-                    resolve(path.join(operationsDir, "..", "auth.ts")) ||
-                    resolve(path.join(operationsDir, "..", "auth.dev.ts"));
+                let {
+                    ctxFile,
+                    gqlSchema,
+                    writeSchemaOut,
+                    writeTypesOut,
+                    writeSdkOut,
+                } = await initializeAndCompile(
+                    options,
+                    async (authConfigFile) => {
+                        process.env.COBALT_AUTH_DEV = "true";
+                        process.env.COBALT_AUTH_CONFIG_FILEPATH =
+                            authConfigFile!;
 
-                if (!authConfigFile) {
-                    console.log(
-                        "No `auth.ts` found. No authentication configured.",
-                    );
-                } else {
-                    process.env.buildtime = "true";
-                    process.env.authconfigfilepath = authConfigFile!;
-
-                    if (require.cache[authConfigFile!]) {
-                        delete require.cache[authConfigFile!];
-                    }
-                    const authConfig = (
-                        require(authConfigFile!) as {
-                            default: CobaltAuthConfig;
+                        if (require.cache[authConfigFile!]) {
+                            delete require.cache[authConfigFile!];
                         }
-                    ).default;
+                        const authConfig = (
+                            require(authConfigFile!) as {
+                                default: CobaltAuthConfig;
+                            }
+                        ).default;
 
-                    const {
-                        issuer: { cobalt },
-                    } = authConfig;
+                        const {
+                            issuer: { cobalt },
+                        } = authConfig;
 
-                    cobaltAuth = {
-                        oauth: undefined,
-                        cobalt: (await Promise.resolve(cobalt))!,
-                    };
-                    authserver = cobaltAuth?.cobalt?.authserver;
-                }
+                        cobaltAuth = {
+                            oauth: undefined,
+                            cobalt: (await Promise.resolve(cobalt))!,
+                        };
+                        authserver = cobaltAuth?.cobalt?.authserver;
+                    },
+                );
+
+                await Promise.all([
+                    writeSchemaOut(),
+                    writeTypesOut(),
+                    writeSdkOut(),
+                ]);
 
                 if (require.cache[ctxFile]) {
                     delete require.cache[ctxFile];
