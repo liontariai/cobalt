@@ -13,9 +13,9 @@ export function parseTypeString(
     let index = 0;
     typeString = typeString.trim();
 
-    // Ensure the input is wrapped in braces for object type
+    // only parse object types
     if (!typeString.startsWith("{")) {
-        typeString = `{${typeString}}`;
+        return metadata;
     }
 
     // Skip leading/trailing union with undefined at root
