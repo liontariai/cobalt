@@ -11,10 +11,14 @@ import {
 import path from "path";
 import fs from "fs";
 
+import JSONC from "comment-json";
+
 // @ts-ignore
 import server_code_as_string from "../server.ts" with { type: "text" };
 // @ts-ignore
 import server_util_code_as_string from "../util.ts" with { type: "text" };
+
+type CobaltAuthConfig = import("@cobalt27/auth").CobaltAuthConfig;
 
 export const buildCommand = (program: Command) => {
     const buildCmd = program
@@ -25,7 +29,7 @@ export const buildCommand = (program: Command) => {
         .option("--pretty", "Format the output graphql/openapi schema", false)
         .option(
             "--docker",
-            "Build and prepare a directory with a Dockerfile",
+            "Create a bundle and prepare a directory with a Dockerfile",
             false,
         )
         .option(
@@ -50,7 +54,28 @@ export const buildCommand = (program: Command) => {
                 writeSchemaOut,
                 writeTypesOut,
                 writeSdkOut,
-            } = await initializeAndCompile(options);
+            } = await initializeAndCompile(options, async (authConfigFile) => {
+                // build and bootstrap cobalt-auth
+                process.env.COBALT_AUTH_DEV = "true";
+                process.env.COBALT_AUTH_CONFIG_FILEPATH = authConfigFile;
+
+                if (require.cache[authConfigFile]) {
+                    delete require.cache[authConfigFile];
+                }
+                const authConfig = (
+                    require(authConfigFile) as {
+                        default: CobaltAuthConfig;
+                    }
+                ).default;
+                const {
+                    issuer: { cobalt },
+                } = authConfig;
+                // bootstrap cobalt-auth
+                await Promise.resolve(cobalt);
+
+                delete process.env.COBALT_AUTH_DEV;
+                delete process.env.COBALT_AUTH_CONFIG_FILEPATH;
+            });
 
             await Promise.all([
                 writeSchemaOut(),
@@ -63,7 +88,7 @@ export const buildCommand = (program: Command) => {
                 `📁 Output directory: ${path.relative(process.cwd(), outDir)}`,
             );
 
-            let serverCodePatched = server_code_as_string
+            let serverCodePatched: string = server_code_as_string
                 .replace(
                     "let _ctxFile: any;",
                     `import ctxFile from process.env.COBALT_CTX_PATH; let _ctxFile = ctxFile;`,
@@ -74,8 +99,8 @@ export const buildCommand = (program: Command) => {
                 )
 
                 .replaceAll(
-                    "process.env.COBALT_SCHEMA_PATH",
-                    `"./schema.graphql"`,
+                    "let _schema: string | undefined;",
+                    `import schema from "./schema.graphql" with { type: "text" }; let _schema = schema;`,
                 )
                 .replaceAll(
                     "process.env.COBALT_CTX_PATH",
@@ -88,29 +113,71 @@ export const buildCommand = (program: Command) => {
                 .replaceAll(
                     "process.env.PORT",
                     `process.env.PORT || ${String(options.port || 4000)}`,
-                )
-                .concat(
-                    `
-                    const httpServer = startServer();
-                    console.log("🚀 Server started on port", httpServer.port);
-                    `,
                 );
 
-            if (authFile) {
+            const projectPackageJson = require(
+                path.join(process.cwd(), "package.json"),
+            ) as {
+                dependencies: Record<string, string>;
+                name: string;
+                scripts: Record<string, string>;
+                devDependencies: Record<string, string>;
+            };
+            const usesCobaltAuth = !!(
+                authFile &&
+                Object.keys(projectPackageJson.dependencies).find(
+                    (dep) => dep === "@cobalt27/auth",
+                ) !== undefined
+            );
+
+            const tsconfig = JSONC.parse(
+                fs.readFileSync(
+                    path.join(process.cwd(), "tsconfig.json"),
+                    "utf8",
+                ),
+            ) as any;
+
+            if (usesCobaltAuth) {
                 serverCodePatched = serverCodePatched
                     .replace(
                         `let _cobaltAuth: any;`,
                         `
                         process.env.buildtime = "true";
-                        process.env.authconfigfilepath = process.env.COBALT_AUTH_PATH!;
-                        import cobaltAuth from process.env.COBALT_AUTH_PATH;
+                        process.env.authconfigfilepath = process.env.COBALT_AUTH_CONFIG_FILEPATH!;
+                        import cobaltAuth from process.env.COBALT_AUTH_CONFIG_FILEPATH!;
                         let _cobaltAuth = cobaltAuth;
                         `,
                     )
                     .replaceAll(
-                        "process.env.COBALT_AUTH_PATH",
+                        "process.env.COBALT_AUTH_CONFIG_FILEPATH!",
                         `"${path.relative(outDir, authFile)}"`,
                     );
+
+                writeFile(
+                    path.join(outDir, "cobalt-auth-sdk.ts"),
+                    fs
+                        .readFileSync(
+                            Bun.resolveSync(".cobalt/auth/sdk", process.cwd()),
+                        )
+                        .toString(),
+                );
+
+                writeFile(
+                    path.join(outDir, "cobalt-auth-compiled.ts"),
+                    `
+                    import * as types from "${Bun.resolveSync(".cobalt/auth/server/$$types/index", process.cwd())}";
+                    import * as resolvers from "${Bun.resolveSync(".cobalt/auth/resolvers", process.cwd())}";
+                    import ctx from "${Bun.resolveSync(".cobalt/auth/server/ctx", process.cwd())}";
+                    import schema from "${Bun.resolveSync(".cobalt/auth/schema.graphql", process.cwd())}" with { type: "text" };
+                    export { types, resolvers, schema, ctx };
+                    `,
+                );
+
+                tsconfig.compilerOptions.paths = {
+                    ...tsconfig.compilerOptions.paths,
+                    ".cobalt/auth/sdk": ["./cobalt-auth-sdk.ts"],
+                    ".cobalt/auth/compiled": ["./cobalt-auth-compiled.ts"],
+                };
             } else {
                 serverCodePatched = serverCodePatched
                     .replace(
@@ -118,52 +185,175 @@ export const buildCommand = (program: Command) => {
                         `let _cobaltAuth = undefined;`,
                     )
                     .replace(
-                        `require(process.env.COBALT_AUTH_PATH!);`,
+                        `require(process.env.COBALT_AUTH_CONFIG_FILEPATH!);`,
                         `undefined;`,
                     );
             }
 
+            const cobaltAuthManifest = usesCobaltAuth
+                ? `{
+                version: "${
+                    require(
+                        Bun.resolveSync(
+                            "@cobalt27/auth/package.json",
+                            process.cwd(),
+                        ),
+                    ).version
+                }",
+            }`
+                : "undefined";
+            serverCodePatched = serverCodePatched.concat(`
+                const buildManifest = {
+                    cobalt: {
+                        version: "${
+                            require(
+                                Bun.resolveSync(
+                                    "@cobalt27/dev/package.json",
+                                    process.cwd(),
+                                ),
+                            ).version
+                        }",
+                        build: {
+                            operationsDir: "${operationsDir}",
+                        },
+                        cobaltAuth: ${cobaltAuthManifest},
+                    },
+                };
+                if(process.env.COBALT_DEV_RETURN_MANIFEST) {
+                    console.log("=== BUILD MANIFEST ===");
+                    console.log(JSON.stringify(buildManifest, null, 2));
+                    console.log("=== END BUILD MANIFEST ===");
+                } else if(process.env.COBALT_AUTH_EXECUTE_INIT) {
+                    console.log("🚀 Executing cobalt auth init via bundled server...");
+                    if(!process.env.COBALT_AUTH_DATABASE_URL) {
+                        console.log("🚨 COBALT_AUTH_DATABASE_URL is not set");
+                        process.exit(1);
+                    }
+
+                    const { zenstackPrismaSchema, prismaConfigTs } = require(".cobalt/auth/compiled") as {
+                        zenstackPrismaSchema: string;
+                        prismaConfigTs: string;
+                    };
+                    const fs = require("fs");
+                    const path = require("path");
+
+                    fs.mkdirSync(path.join(process.cwd(), ".cobalt/auth"), { recursive: true });
+                    fs.writeFileSync(
+                        path.join(process.cwd(), ".cobalt/auth/schema.prisma"),
+                        zenstackPrismaSchema,
+                    );
+                    fs.writeFileSync(
+                        path.join(process.cwd(), ".cobalt/auth/prisma.config.ts"),
+                        prismaConfigTs,
+                    );
+
+                    fs.mkdirSync(process.env.COBALT_AUTH_DATABASE_URL!, { recursive: true });
+                    await Bun.$\`bun --bun /app/node_modules/.bin/prisma db push --skip-generate\`.cwd(path.join(process.cwd(), ".cobalt/auth")).env({
+                        ...process.env,
+                        COBALT_AUTH_PRISMA_SCHEMA_PATH: path.join(process.cwd(), ".cobalt/auth/schema.prisma"),
+                    });
+
+                    fs.unlinkSync(path.join(process.cwd(), ".cobalt/auth/schema.prisma"));
+                    fs.unlinkSync(path.join(process.cwd(), ".cobalt/auth/prisma.config.ts"));
+                    fs.rmdirSync(path.join(process.cwd(), ".cobalt/auth"));
+                    fs.rmdirSync(path.join(process.cwd(), ".cobalt"));
+
+                    console.log("🚀 Cobalt auth init completed");
+                } else if(process.env.COBALT_AUTH_EXECUTE_STUDIO) {
+                    console.log("🚀 Executing cobalt auth studio via bundled server...");
+                    if(!process.env.COBALT_AUTH_DATABASE_URL) {
+                        console.log("🚨 COBALT_AUTH_DATABASE_URL is not set");
+                        process.exit(1);
+                    }
+
+                    const { zenstackPrismaSchema, prismaConfigTs } = require(".cobalt/auth/compiled") as {
+                        zenstackPrismaSchema: string;
+                        prismaConfigTs: string;
+                    };
+                    const fs = require("fs");
+                    const path = require("path");
+
+                    fs.mkdirSync(path.join(process.cwd(), ".cobalt/auth"), { recursive: true });
+                    fs.writeFileSync(
+                        path.join(process.cwd(), ".cobalt/auth/schema.prisma"),
+                        zenstackPrismaSchema,
+                    );
+                    fs.writeFileSync(
+                        path.join(process.cwd(), ".cobalt/auth/prisma.config.ts"),
+                        prismaConfigTs,
+                    );
+
+                    fs.mkdirSync(process.env.COBALT_AUTH_DATABASE_URL!, { recursive: true });
+                    await Bun.$\`bun --bun /app/node_modules/.bin/prisma studio\`.cwd(path.join(process.cwd(), ".cobalt/auth")).env({
+                        ...process.env,
+                        COBALT_AUTH_PRISMA_SCHEMA_PATH: path.join(process.cwd(), ".cobalt/auth/schema.prisma"),
+                    });
+
+                    fs.unlinkSync(path.join(process.cwd(), ".cobalt/auth/schema.prisma"));
+                    fs.unlinkSync(path.join(process.cwd(), ".cobalt/auth/prisma.config.ts"));
+                    fs.rmdirSync(path.join(process.cwd(), ".cobalt/auth"));
+                    fs.rmdirSync(path.join(process.cwd(), ".cobalt"));
+
+                    console.log("🚀 Cobalt auth studio completed");
+                } else {
+                    const httpServer = startServer();
+                    console.log("🚀 Server started on port", httpServer.port);
+                }
+            `);
+
             writeFile(path.join(outDir, "schema.graphql"), schema);
-            writeFile(path.join(outDir, "server.ts"), serverCodePatched);
+            writeFile(path.join(outDir, "cobalt.server.ts"), serverCodePatched);
             writeFile(path.join(outDir, "util.ts"), server_util_code_as_string);
 
-            const usesCobaltAuth =
-                Object.keys(
-                    require(path.join(process.cwd(), "package.json"))
-                        .dependencies,
-                ).find((dep) => dep === "@cobalt27/auth") !== undefined;
-
             await Bun.build({
-                entrypoints: [path.join(outDir, "server.ts")],
+                entrypoints: [path.join(outDir, "cobalt.server.ts")],
                 outdir: outDir,
                 banner: "var self = globalThis;",
-                external: Object.keys(
-                    require(path.join(process.cwd(), "package.json"))
-                        .dependencies,
-                )
+                external: Object.keys(projectPackageJson.dependencies)
                     .filter(
                         (dep) =>
                             ![
                                 // embed these dependencies
-                                "@cobalt27/runtime",
+                                "@cobalt27/auth",
                             ].includes(dep),
                     )
                     .concat([
                         ...(usesCobaltAuth
                             ? [
-                                  "@cobalt27/auth",
                                   "@openauthjs/openauth",
                                   ".cobalt/auth/oauth",
-                                  ".cobalt/auth/sdk",
                                   "@standard-schema/spec",
                                   "aws4fetch",
                                   "jose",
-                              ]
+                                  "zenstack",
+                                  "@electric-sql/pglite",
+                                  "@prisma/client",
+                                  "@zenstackhq/runtime",
+                                  "@zenstackhq/sdk",
+                                  "pglite-prisma-adapter",
+                                  "prisma",
+                              ].concat(
+                                  Object.keys(
+                                      require(
+                                          Bun.resolveSync(
+                                              "@cobalt27/auth/package.json",
+                                              process.cwd(),
+                                          ),
+                                      ).dependencies,
+                                  ),
+                              )
                             : []),
+                        "@cobalt27/generate",
+                        "dotenv",
                         "graphql",
                         "graphql-sse",
                         "@graphql-tools/schema",
+                        "hono",
+                        "hono/tiny",
+                        "zod",
                     ]),
+                packages: "bundle",
+                tsconfig,
                 target: "bun",
                 // minify: true,
                 sourcemap: "external",
@@ -174,27 +364,27 @@ export const buildCommand = (program: Command) => {
                 fs.writeFileSync(file, "#!/usr/bin/env bun\n" + content);
             });
 
-            removeFile(path.join(outDir, "server.ts"));
+            removeFile(path.join(outDir, "schema.graphql"));
+            removeFile(path.join(outDir, "cobalt.server.ts"));
             removeFile(path.join(outDir, "util.ts"));
+            removeFile(path.join(outDir, "cobalt-auth-sdk.ts"));
+            removeFile(path.join(outDir, "cobalt-auth-compiled.ts"));
 
             if (options.docker) {
                 // Create package.json for production
                 const productionPackageJson = {
-                    name: require(path.join(process.cwd(), "package.json"))
-                        .name,
+                    name: `${projectPackageJson.name}--cobalt-build`,
                     version: "1.0.0",
                     type: "module",
                     scripts: {
-                        ...(require(path.join(process.cwd(), "package.json"))
-                            .scripts || {}),
-                        "cobalt:server": "bun run server.js",
+                        ...(projectPackageJson.scripts || {}),
                     },
                     dependencies: {
                         "@cobalt27/runtime": "latest",
                         ...(usesCobaltAuth
                             ? {
                                   "@cobalt27/auth": "latest",
-                                  "@cobalt27/generate": "latest",
+                                  "@cobalt27/dev": "latest",
                                   zenstack: "2.16.1",
                                   "@electric-sql/pglite": "latest",
                               }
@@ -205,9 +395,7 @@ export const buildCommand = (program: Command) => {
                         "@graphql-tools/schema": "^10.0.0",
                         ...Object.fromEntries(
                             Object.entries(
-                                require(
-                                    path.join(process.cwd(), "package.json"),
-                                ).dependencies,
+                                projectPackageJson.dependencies,
                             ).filter(
                                 ([dep]) =>
                                     ![
@@ -222,9 +410,7 @@ export const buildCommand = (program: Command) => {
                     devDependencies: {
                         ...Object.fromEntries(
                             Object.entries(
-                                require(
-                                    path.join(process.cwd(), "package.json"),
-                                ).devDependencies,
+                                projectPackageJson.devDependencies,
                             ).filter(
                                 ([dep]) =>
                                     ![
@@ -244,12 +430,9 @@ export const buildCommand = (program: Command) => {
                 );
 
                 // detect if project uses prisma
-                const prismaPackageJson = require(
-                    path.join(process.cwd(), "package.json"),
-                );
                 const hasPrisma =
-                    prismaPackageJson.dependencies?.["@prisma/client"] ||
-                    prismaPackageJson.devDependencies?.["@prisma/client"];
+                    projectPackageJson.dependencies?.["@prisma/client"] ||
+                    projectPackageJson.devDependencies?.["@prisma/client"];
                 let copiedEnvFile = false;
                 let prismaConfigPathRelative: string | undefined;
                 let prismaSchemaDirRelative: string | undefined;
@@ -307,7 +490,7 @@ export const buildCommand = (program: Command) => {
 
                 const dockerInstallCommand =
                     options.dockerDebugWithLocalNpmRegistry
-                        ? `RUN bun install --registry=http://host.docker.internal:4873`
+                        ? `RUN echo '[install]\\nregistry = { url = "http://host.docker.internal:4873", username = "admin", password = "admin" }' > ./bunfig.toml && bun install`
                         : `RUN bun install`;
 
                 // Create Dockerfile
@@ -324,16 +507,25 @@ WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/schema.graphql ./schema.graphql
-COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/cobalt.server.js ./cobalt.server.js
 ${prismaSchemaDirRelative ? `COPY --from=builder /app/${prismaSchemaDirRelative} ./${prismaSchemaDirRelative}` : ""}
 ${prismaConfigPathRelative ? `COPY --from=builder /app/${prismaConfigPathRelative} ./${prismaConfigPathRelative}` : ""}
 ${copiedEnvFile ? `COPY --from=builder /app/.env ./.env` : ""}
 
 ${usesCobaltAuth ? `ENV OPENAUTH_ISSUER=\${OPENAUTH_ISSUER:-http://localhost:4000}` : ""}
+${usesCobaltAuth ? `ENV COBALT_AUTH_DATABASE_URL=\${COBALT_AUTH_DATABASE_URL:-/app/node_modules/.cobalt/auth/server/db/pglite_data}` : ""}
+${
+    usesCobaltAuth
+        ? `
+# For some reason, we need to run the init command twice to ensure the database is initialized. 
+# There may be an error initially with wasm related to pglite. 
+RUN bunx cobalt auth init && bunx cobalt auth init
+`
+        : ""
+}
 
 EXPOSE 4000
-CMD ["bun", "cobalt:server"]
+CMD ["bunx", "cobalt", "start"]
 `;
 
                 writeFile(path.join(outDir, "Dockerfile"), dockerfileContent);
@@ -365,7 +557,7 @@ CMD ["bun", "cobalt:server"]
     docker run -p 4000:4000 cobalt-app
 
 📋 Files created:
-    - server.js (production server entry point)
+    - cobalt.server.js (production server entry point)
     - package.json (production dependencies)
     - Dockerfile (container configuration)
     - .cobalt/ (generated schema and types)

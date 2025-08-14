@@ -4,6 +4,7 @@ import { createHandler } from "graphql-sse/lib/use/fetch";
 import { makeGraphQLHandler } from "./util";
 import { readFileSync } from "fs";
 
+let _schema: string | undefined;
 let _ctxFile: any;
 let _resolversFile: any;
 let _cobaltAuth: any;
@@ -12,17 +13,20 @@ if (process.env.COMPILE_TIME) {
 } else {
     _ctxFile = require(process.env.COBALT_CTX_PATH!);
     _resolversFile = require(process.env.COBALT_RESOLVERS_PATH!);
-    _cobaltAuth = require(process.env.COBALT_AUTH_PATH!);
+    _cobaltAuth = require(process.env.COBALT_AUTH_CONFIG_FILEPATH!);
 }
 
-const schema = readFileSync(process.env.COBALT_SCHEMA_PATH!, "utf8");
+if (!_schema) {
+    _schema = readFileSync(process.env.COBALT_SCHEMA_PATH!, "utf8");
+}
 
 let cobaltAuth: CobaltAuthConfig["issuer"] | undefined;
 if (!_cobaltAuth) {
     console.log("No `auth.ts` found. No authentication configured.");
 } else {
-    process.env.buildtime = "true";
-    process.env.authconfigfilepath = process.env.COBALT_AUTH_PATH!;
+    process.env.COBALT_AUTH_DEV = "true";
+    process.env.COBALT_AUTH_CONFIG_FILEPATH =
+        process.env.COBALT_AUTH_CONFIG_FILEPATH!;
     const authConfig = _cobaltAuth.default as CobaltAuthConfig;
 
     const {
@@ -38,7 +42,7 @@ if (!_cobaltAuth) {
 const port = process.env.COBALT_PORT || process.env.PORT || 4000;
 
 const gqlSchema = makeExecutableSchema({
-    typeDefs: schema,
+    typeDefs: _schema!,
     resolvers: _resolversFile,
 });
 
