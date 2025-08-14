@@ -28,7 +28,8 @@ export const makeIdentityManagementPlatform = async ({
     const prismaSchema = path.join(zschemaDir, "prisma", "schema.prisma");
     const zschemaPath = path.join(zschemaDir, "_schema.zmodel");
 
-    const pgliteDataDir = path.join(dbDir, "pglite_data");
+    const pgliteDataDir =
+        process.env.COBALT_AUTH_DATABASE_URL || path.join(dbDir, "pglite_data");
     process.env.COBALT_AUTH_DATABASE_URL = pgliteDataDir; //`file:${path.join(dbDir, "dev")}`;
 
     const hasher = new Bun.CryptoHasher("sha256");
@@ -112,11 +113,18 @@ export const makeIdentityManagementPlatform = async ({
         export default {
             experimental: {
                 adapter: true,
+                studio: true,
             },
-            schema: path.join("server", "db", "schema", "prisma", "schema.prisma"),
+            schema: process.env.COBALT_AUTH_PRISMA_SCHEMA_PATH || path.join("server", "db", "schema", "prisma", "schema.prisma"),
             adapter: async () => {
                 const client = new PGlite({ dataDir: process.env.COBALT_AUTH_DATABASE_URL });
                 return new PrismaPGlite(client);
+            },
+            studio: {
+                adapter: async () => {
+                    const client = new PGlite({ dataDir: process.env.COBALT_AUTH_DATABASE_URL });
+                    return new PrismaPGlite(client);
+                },
             },
         } satisfies PrismaConfig;
         `,
@@ -186,13 +194,13 @@ export const makeIdentityManagementPlatform = async ({
 
     const zenstackDir = path.join(serverDir, "db", "zenstack");
 
-    await $`zenstack generate --schema ${zschemaPath} --output ${zenstackDir}`
+    await $`bun --bun zenstack generate --schema ${zschemaPath} --output ${zenstackDir}`
         .env({
             ...process.env,
             COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
         })
         .quiet();
-    await $`prisma generate --schema ${prismaSchema}`
+    await $`bun --bun prisma generate --schema ${prismaSchema}`
         .env({
             ...process.env,
             COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
@@ -215,7 +223,7 @@ export const makeIdentityManagementPlatform = async ({
         );
     await Bun.write(prismaSchema, prismaSchemaContentWithPostgresqlUrl);
 
-    await $`prisma db push --schema ${prismaSchema}`
+    await $`bun --bun prisma db push --schema ${prismaSchema}`
         .env({
             ...process.env,
             COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,

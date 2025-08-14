@@ -5,6 +5,7 @@ import { issuer } from "@openauthjs/openauth";
 import type { ObjectSchema, ObjectEntries } from "valibot";
 import path from "path";
 import { findNodeModulesDir } from "./helpers";
+import fs from "fs";
 
 let lastRootBypassToken = "";
 export const rootBypassTokenFactory = () => {
@@ -13,7 +14,7 @@ export const rootBypassTokenFactory = () => {
     return token;
 };
 
-export const makeOpenAuthClient = async (
+export const makeOpenAuthClient = (
     openauthServer: ReturnType<typeof issuer>,
     subjects: {
         [k: string]: ObjectSchema<ObjectEntries, undefined>;
@@ -21,43 +22,10 @@ export const makeOpenAuthClient = async (
 ) => {
     const openauthClient = createClient({
         clientID: "internal",
-        fetch: async (
-            input: string | URL | globalThis.Request,
-            init?: RequestInit,
-        ) => {
+        fetch: async (input: globalThis.Request, init?: RequestInit) => {
             return await openauthServer.fetch(new Request(input, init));
         },
     });
-
-    const { __Subjects__ } = resolveTypeWithSource(
-        `
-        import authconfig from "${process.env.authconfigfilepath!.replace(".ts", "")}";
-        export {};
-        `,
-        {
-            __Subjects__: "typeof authconfig.issuer.cobalt.subjects",
-        },
-    );
-
-    const cobaltAuthDir = path.join(findNodeModulesDir(), ".cobalt", "auth");
-    Bun.write(
-        Bun.file(path.join(cobaltAuthDir, "oauth.ts")),
-        `import type { v1 } from "@standard-schema/spec";
-type Subjects = ${__Subjects__};
-export type __Subjects__ = {
-    [k in keyof Subjects]: v1.InferOutput<Subjects[k]>
-};
-
-type openauthClient = ReturnType<typeof import("@openauthjs/openauth/client").createClient>;
-type VerifyOptions = import("@openauthjs/openauth/client").VerifyOptions;
-export type client = {
-    authorize: openauthClient["authorize"];
-    exchange: openauthClient["exchange"];
-    refresh: openauthClient["refresh"];
-    verify: (token: string, options?: VerifyOptions) =>  Promise<import("@openauthjs/openauth/client").VerifyResult<Subjects> | import("@openauthjs/openauth/client").VerifyError>;
-}
-`,
-    );
 
     const client = {
         authorize: openauthClient.authorize.bind(openauthClient),
@@ -78,4 +46,35 @@ export type client = {
     };
 
     return client;
+};
+export const writeOpenAuthClientTypes = (cobalAutConfigFilePath: string) => {
+    const { __Subjects__ } = resolveTypeWithSource(
+        `
+            import authconfig from "${cobalAutConfigFilePath.replace(".ts", "")}";
+            export {};
+            `,
+        {
+            __Subjects__: "typeof authconfig.issuer.cobalt.subjects",
+        },
+    );
+    const cobaltAuthDir = path.join(findNodeModulesDir(), ".cobalt", "auth");
+
+    fs.writeFileSync(
+        path.join(cobaltAuthDir, "oauth.ts"),
+        `import type { v1 } from "@standard-schema/spec";
+type Subjects = ${__Subjects__};
+export type __Subjects__ = {
+    [k in keyof Subjects]: v1.InferOutput<Subjects[k]>
+};
+
+type openauthClient = ReturnType<typeof import("@openauthjs/openauth/client").createClient>;
+type VerifyOptions = import("@openauthjs/openauth/client").VerifyOptions;
+export type client = {
+    authorize: openauthClient["authorize"];
+    exchange: openauthClient["exchange"];
+    refresh: openauthClient["refresh"];
+    verify: (token: string, options?: VerifyOptions) =>  Promise<import("@openauthjs/openauth/client").VerifyResult<Subjects> | import("@openauthjs/openauth/client").VerifyError>;
+}
+`,
+    );
 };
