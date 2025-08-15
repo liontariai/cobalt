@@ -8,10 +8,10 @@ import {
 } from "../shared";
 import path from "path";
 
-import type { CobaltAuthConfig } from "@cobalt27/auth";
 import { resolve } from "../shared";
-import { makeIdentityManagementPlatform } from "@cobalt27/auth/src/generate/zenstack";
 import { $ } from "bun";
+
+type CobaltAuthConfig = import("@cobalt27/auth").CobaltAuthConfig;
 
 export const registerAuthInitCommand = (auth: Command) => {
     const initCmd = auth
