@@ -21,7 +21,14 @@ export async function connectOpenId(
                 where: {
                     provider,
                     claims: {
-                        path: `${provider}.sub`,
+                        // this is a ugly hack-around, because for some reason the type of path changed to string
+                        // when using the latest zenstack and prisma 6.13.0
+                        // This might come from the workaround we're using for zenstack because the schema is
+                        // is defined with sqlite as database but we change it after prisma schema generation
+                        // to postgres.
+                        // in any case, for the typing to work we need to type cast it to string but in reality
+                        // an array of strings is expected
+                        path: [provider, "sub"] as unknown as string,
                         equals: claims.sub,
                     },
                 },
