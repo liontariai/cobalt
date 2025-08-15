@@ -2,16 +2,17 @@
 
 import { Command } from "commander";
 import type { AuthorizationState } from "@openauthjs/openauth/issuer";
-import type { CobaltAuthConfig } from "@cobalt27/auth";
 import { createHandler } from "graphql-sse/lib/use/fetch";
 
 // strange work around
 import { makeGraphQLHandler } from "../util-2";
 
-import { findOperationsDir, initializeAndCompile, resolve } from "./shared";
+import { findOperationsDir, initializeAndCompile } from "./shared";
 import path from "path";
 import { watch } from "fs/promises";
 import type { Server } from "bun";
+
+type CobaltAuthConfig = import("@cobalt27/auth").CobaltAuthConfig;
 
 export const devCommand = (program: Command) => {
     const devCmd = program
