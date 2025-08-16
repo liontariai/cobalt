@@ -1,5 +1,5 @@
 import type { CompilerOptions } from "typescript";
-import type { ProjectConfig } from "./index";
+import type { ProjectConfigInitialized } from "./index";
 import path from "path";
 
 // Shared Cobalt dependencies
@@ -17,10 +17,11 @@ export const COBALT_DEV_DEPENDENCIES = {
     typescript: "~5.7.3",
     prettier: "^3.0.0",
     "@types/node": "^20.0.0",
+    concurrently: "^9.2.0",
 } as const;
 
 // Shared base TypeScript config
-export const generateBaseTsConfig = (config: ProjectConfig) => ({
+export const generateBaseTsConfig = (config: ProjectConfigInitialized) => ({
     compilerOptions: {
         lib: ["ES2022"],
         types: ["@cobalt27/runtime", "node"],
@@ -51,7 +52,7 @@ export const generateBaseTsConfig = (config: ProjectConfig) => ({
     exclude: ["node_modules"],
 });
 export const adjustTsConfigForCobalt = (
-    config: ProjectConfig,
+    config: ProjectConfigInitialized,
     tsConfig: Record<string, any> & {
         include?: string[];
         exclude?: string[];
@@ -95,7 +96,7 @@ export const adjustTsConfigForCobalt = (
 
 // Shared package.json generator
 export const generateBasePackageJson = (
-    config: ProjectConfig,
+    config: ProjectConfigInitialized,
     additionalScripts: Record<string, string> = {},
     additionalDeps: Record<string, string> = {},
     additionalDevDeps: Record<string, string> = {},
@@ -104,7 +105,21 @@ export const generateBasePackageJson = (
     version: "0.1.0",
     type: "module",
     scripts: {
-        ...additionalScripts,
+        ...Object.fromEntries(
+            Object.entries(additionalScripts)
+                .map(([key, value]) => [
+                    ["dev", "build", "start"].includes(key)
+                        ? [
+                              [`${config.template?.shortName}:${key}`, value],
+                              [
+                                  key,
+                                  `concurrently "bun run ${config.template?.shortName}:${key}" "cobalt ${key}"`,
+                              ],
+                          ]
+                        : [[key, value]],
+                ])
+                .flat(2),
+        ),
         ...Object.fromEntries(
             Object.entries({
                 dev: "cobalt dev",
@@ -197,7 +212,7 @@ dist/
 `;
 
 // Shared base files that every template should include
-export const generateBaseFiles = (config: ProjectConfig) => {
+export const generateBaseFiles = (config: ProjectConfigInitialized) => {
     return [
         {
             path: `${config.srcBaseDir}/server/ctx.ts`,
@@ -220,7 +235,7 @@ export const generateBaseFiles = (config: ProjectConfig) => {
 
 // Shared README generator
 export const generateBaseReadme = (
-    config: ProjectConfig,
+    config: ProjectConfigInitialized,
     templateName: string,
     templateDescription: string,
     additionalStructure: string = "",

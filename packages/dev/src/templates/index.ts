@@ -1,5 +1,8 @@
-import { readdir } from "fs/promises";
-import path from "path";
+import reactRouterV7 from "./templates/react-router-v7";
+
+const templatesMap = {
+    "react-router-v7": reactRouterV7,
+};
 
 export type ProjectConfig = {
     name: string;
@@ -9,14 +12,19 @@ export type ProjectConfig = {
     template?: string;
 };
 
+export type ProjectConfigInitialized = Omit<ProjectConfig, "template"> & {
+    template: TemplateConfig | undefined;
+};
+
 export type TemplateConfig = {
     name: string;
+    shortName: string;
     description: string;
     srcBaseDir: string;
     directories: string[];
     files: Array<{
         path: string;
-        generator: (config: ProjectConfig) => string;
+        generator: (config: ProjectConfigInitialized) => string;
     }>;
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
@@ -31,24 +39,10 @@ export const loadTemplates = async (): Promise<
     if (templatesCache) {
         return templatesCache;
     }
-
-    const templatesDir = path.join(__dirname, "templates");
-    const templateFiles = await readdir(templatesDir);
-
     const templates: Record<string, TemplateConfig> = {};
 
-    for (const file of templateFiles) {
-        if (file.endsWith(".ts") && file !== "index.ts") {
-            const templateName = file.replace(".ts", "");
-            const templateModule = await import(`./templates/${templateName}`);
-            templates[templateName] = templateModule.default;
-        } else if (!file.includes(".")) {
-            const templateName = file;
-            const templateModule = await import(
-                `./templates/${templateName}/index.ts`
-            );
-            templates[templateName] = templateModule.default;
-        }
+    for (const [templateName, templateModule] of Object.entries(templatesMap)) {
+        templates[templateName] = templateModule;
     }
 
     templatesCache = templates;
