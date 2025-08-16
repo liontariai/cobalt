@@ -6,6 +6,7 @@ import {
     loadTemplates,
     type TemplateConfig,
     type ProjectConfig,
+    type ProjectConfigInitialized,
 } from "../templates";
 
 type InitOptions = {
@@ -42,13 +43,12 @@ const validateTemplate = async (
     return template;
 };
 
-const createDirectoryStructure = async (config: ProjectConfig) => {
+const createDirectoryStructure = async (config: ProjectConfigInitialized) => {
     if (!config.template) {
         return;
     }
 
-    const templates = await loadTemplates();
-    const templateConfig = templates[config.template];
+    const templateConfig = config.template;
 
     templateConfig.directories.forEach((dir: string) => {
         createDirectory(path.join(config.projectDir, dir));
@@ -111,7 +111,7 @@ const generateTsConfig = () => ({
     exclude: ["node_modules"],
 });
 
-const generateReadme = (config: ProjectConfig) => `# ${config.name}
+const generateReadme = (config: ProjectConfigInitialized) => `# ${config.name}
 
 A Cobalt application.
 
@@ -146,7 +146,7 @@ A Cobalt application.
 `;
 
 const generateGitignore = (
-    config: ProjectConfig,
+    config: ProjectConfigInitialized,
     templateConfig?: TemplateConfig,
 ) => `
 .DS_Store
@@ -159,14 +159,12 @@ ${templateConfig?.gitignore || ""}
 `;
 
 // File creation functions
-const createProjectFiles = async (config: ProjectConfig) => {
+const createProjectFiles = async (config: ProjectConfigInitialized) => {
     const { projectDir, template } = config;
 
     let templateConfig: TemplateConfig | undefined;
     if (template) {
-        // Use template-specific file generation
-        const templates = await loadTemplates();
-        templateConfig = templates[template];
+        templateConfig = template;
 
         generateBaseFiles(config).forEach(({ path: filePath, generator }) => {
             writeFile(path.join(projectDir, filePath), generator());
@@ -178,7 +176,7 @@ const createProjectFiles = async (config: ProjectConfig) => {
                 generator,
             }: {
                 path: string;
-                generator: (config: ProjectConfig) => string;
+                generator: (config: ProjectConfigInitialized) => string;
             }) => {
                 writeFile(path.join(projectDir, filePath), generator(config));
             },
@@ -209,11 +207,10 @@ const createProjectFiles = async (config: ProjectConfig) => {
 };
 
 // Success message
-const displaySuccessMessage = async (config: ProjectConfig) => {
+const displaySuccessMessage = async (config: ProjectConfigInitialized) => {
     let templateInfo = "";
     if (config.template) {
-        const templates = await loadTemplates();
-        templateInfo = ` with ${templates[config.template].name} template`;
+        templateInfo = ` with ${config.template.name} template`;
     }
 
     console.log(`
@@ -226,7 +223,7 @@ Next steps:
 
 Your GraphQL server will be available at http://localhost:4000/graphql
 ${
-    config.template === "react-router-v7"
+    config.template?.name === "react-router-v7"
         ? `
 Your React app will be available at http://localhost:4000`
         : ""
@@ -236,6 +233,10 @@ Your React app will be available at http://localhost:4000`
 
 // Main initialization function
 const initializeProject = async (config: ProjectConfig) => {
+    let _projectConfig: ProjectConfigInitialized | ProjectConfig = config;
+    let projectConfig: ProjectConfigInitialized =
+        _projectConfig as ProjectConfigInitialized;
+
     let templateConfig: TemplateConfig | undefined;
     if (config.template) {
         const templates = await loadTemplates();
@@ -243,6 +244,7 @@ const initializeProject = async (config: ProjectConfig) => {
         if (templateConfig.srcBaseDir !== config.srcBaseDir) {
             config.srcBaseDir = templateConfig.srcBaseDir;
         }
+        (projectConfig as ProjectConfigInitialized).template = templateConfig;
     }
 
     console.log(
@@ -255,13 +257,13 @@ const initializeProject = async (config: ProjectConfig) => {
     createDirectory(config.projectDir);
 
     // Create directory structure
-    await createDirectoryStructure(config);
+    await createDirectoryStructure(projectConfig);
 
     // Create all project files
-    await createProjectFiles(config);
+    await createProjectFiles(projectConfig);
 
     // Display success message
-    await displaySuccessMessage(config);
+    await displaySuccessMessage(projectConfig);
 };
 
 export const initCommand = (program: Command) => {

@@ -1,4 +1,8 @@
-import type { ProjectConfig, TemplateConfig } from "../../index";
+import type {
+    ProjectConfig,
+    ProjectConfigInitialized,
+    TemplateConfig,
+} from "../../index";
 import {
     generateBasePackageJson,
     generateBaseReadme,
@@ -13,6 +17,7 @@ const DIRECTORIES = ["app", "app/routes", "public"];
 
 const template: TemplateConfig = {
     name: "React Router v7",
+    shortName: "rr7",
     description:
         "A Cobalt project with React Router v7 for client-side routing",
     directories: DIRECTORIES,
@@ -27,7 +32,7 @@ const template: TemplateConfig = {
     files: [
         {
             path: "package.json",
-            generator: (config: ProjectConfig) =>
+            generator: (config: ProjectConfigInitialized) =>
                 JSON.stringify(
                     generateBasePackageJson(
                         config,
@@ -41,16 +46,16 @@ const template: TemplateConfig = {
         },
         {
             path: "tsconfig.json",
-            generator: (config: ProjectConfig) =>
+            generator: (config: ProjectConfigInitialized) =>
                 JSON.stringify(generateTsConfig(config), null, 4),
         },
         ...Object.entries(files).map(([path, generator]) => ({
             path,
-            generator: (config: ProjectConfig) => generator(config),
+            generator: (config: ProjectConfigInitialized) => generator(config),
         })),
         {
             path: "README.md",
-            generator: (config: ProjectConfig) =>
+            generator: (config: ProjectConfigInitialized) =>
                 generateBaseReadme(
                     config,
                     "React Router v7",

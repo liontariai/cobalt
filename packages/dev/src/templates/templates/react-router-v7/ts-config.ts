@@ -4,11 +4,11 @@ import type {
     ModuleResolutionKind,
     ScriptTarget,
 } from "typescript";
-import type { ProjectConfig } from "../..";
+import type { ProjectConfigInitialized } from "../..";
 import { adjustTsConfigForCobalt } from "../../shared";
 
 // React Router v7 specific TypeScript config
-export const generateTsConfig = (config: ProjectConfig) => {
+export const generateTsConfig = (config: ProjectConfigInitialized) => {
     return adjustTsConfigForCobalt(config, {
         include: [
             "**/*",

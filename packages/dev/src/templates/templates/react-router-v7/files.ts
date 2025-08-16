@@ -1,7 +1,7 @@
-import type { ProjectConfig } from "../../index";
+import type { ProjectConfigInitialized } from "../../index";
 
 export const files = {
-    "app/app.css": (config: ProjectConfig) => `
+    "app/app.css": (config: ProjectConfigInitialized) => `
 @import "tailwindcss";
 
 @theme {
@@ -19,7 +19,7 @@ body {
 }
 `,
 
-    "app/root.tsx": (config: ProjectConfig) => `
+    "app/root.tsx": (config: ProjectConfigInitialized) => `
 import {
   isRouteErrorResponse,
   Links,
@@ -97,7 +97,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
     `,
 
-    "app/routes.ts": (config: ProjectConfig) => `
+    "app/routes.ts": (config: ProjectConfigInitialized) => `
 import type { RouteConfig } from "@react-router/dev/routes";
 import { index } from "@react-router/dev/routes";
 
@@ -105,7 +105,7 @@ export default [index("routes/home.tsx")] satisfies RouteConfig;
     `,
 
     "app/routes/home.tsx": (
-        config: ProjectConfig,
+        config: ProjectConfigInitialized,
     ) => `import type { Route } from "./+types/home";
 import sdk from "sdk";
 
@@ -143,7 +143,7 @@ export default function Home() {
 `,
 
     "react-router.config.ts": (
-        config: ProjectConfig,
+        config: ProjectConfigInitialized,
     ) => `import type { Config } from "@react-router/dev/config";
 
 export default {
@@ -154,7 +154,7 @@ export default {
 
 `,
     "vite.config.ts": (
-        config: ProjectConfig,
+        config: ProjectConfigInitialized,
     ) => `import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
