@@ -219,6 +219,9 @@ export const buildCommand = (program: Command) => {
                         cobaltAuth: ${cobaltAuthManifest},
                     },
                 };
+                ${
+                    usesCobaltAuth
+                        ? `
                 if(process.env.COBALT_DEV_RETURN_MANIFEST) {
                     console.log("=== BUILD MANIFEST ===");
                     console.log(JSON.stringify(buildManifest, null, 2));
@@ -298,6 +301,18 @@ export const buildCommand = (program: Command) => {
                 } else {
                     const httpServer = startServer();
                     console.log("🚀 Server started on port", httpServer.port);
+                }
+                `
+                        : `
+                if(process.env.COBALT_DEV_RETURN_MANIFEST) {
+                    console.log("=== BUILD MANIFEST ===");
+                    console.log(JSON.stringify(buildManifest, null, 2));
+                    console.log("=== END BUILD MANIFEST ===");
+                } else {
+                    const httpServer = startServer();
+                    console.log("🚀 Server started on port", httpServer.port);
+                }
+                `
                 }
             `);
 
