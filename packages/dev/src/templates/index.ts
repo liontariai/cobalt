@@ -10,6 +10,7 @@ export type ProjectConfig = {
     srcBaseDir: string;
     projectDir: string;
     template?: string;
+    withAuth?: boolean;
 };
 
 export type ProjectConfigInitialized = Omit<ProjectConfig, "template"> & {

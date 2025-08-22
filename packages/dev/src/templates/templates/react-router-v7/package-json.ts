@@ -1,6 +1,6 @@
 export const SCRIPTS = {
     build: "react-router build",
-    dev: "react-router dev",
+    dev: "react-router dev --force",
     start: "react-router-serve ./build/server/index.js",
     typecheck: "react-router typegen && tsc",
 };

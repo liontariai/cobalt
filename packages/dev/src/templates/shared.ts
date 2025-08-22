@@ -4,8 +4,8 @@ import path from "path";
 
 // Shared Cobalt dependencies
 export const COBALT_DEPENDENCIES = {
+    "@cobalt27/dev": "latest",
     "@cobalt27/runtime": "latest",
-    "@cobalt27/auth": "latest",
     graphql: "^16.8.1",
     "graphql-sse": "^2.5.4",
     "@graphql-tools/schema": "^10.0.0",
@@ -13,7 +13,6 @@ export const COBALT_DEPENDENCIES = {
 
 export const COBALT_DEV_DEPENDENCIES = {
     "bun-types": "latest",
-    "@cobalt27/dev": "latest",
     typescript: "~5.7.3",
     prettier: "^3.0.0",
     "@types/node": "^20.0.0",
@@ -49,7 +48,6 @@ export const generateBaseTsConfig = (config: ProjectConfigInitialized) => ({
         incremental: true,
     },
     include: [`${config.srcBaseDir}/**/*`],
-    exclude: ["node_modules"],
 });
 export const adjustTsConfigForCobalt = (
     config: ProjectConfigInitialized,
@@ -69,9 +67,10 @@ export const adjustTsConfigForCobalt = (
         include: Array.from(
             new Set([...(tsConfig.include || []), ...baseConfig.include]),
         ),
-        exclude: Array.from(
-            new Set([...(tsConfig.exclude || []), ...baseConfig.exclude]),
-        ),
+        exclude: tsConfig.exclude || [],
+        // exclude: Array.from(
+        //     new Set([...(tsConfig.exclude || []), ...baseConfig.exclude]),
+        // ),
         compilerOptions: {
             ...tsConfig.compilerOptions,
             types: Array.from(
@@ -113,7 +112,7 @@ export const generateBasePackageJson = (
                               [`${config.template?.shortName}:${key}`, value],
                               [
                                   key,
-                                  `concurrently "bun run ${config.template?.shortName}:${key}" "cobalt ${key}"`,
+                                  `concurrently ${["dev", "start"].includes(key) ? "--restartTries 10 --restartDelay 2000" : ""} "cobalt ${key}" "bun run ${config.template?.shortName}:${key}"`,
                               ],
                           ]
                         : [[key, value]],
@@ -131,12 +130,17 @@ export const generateBasePackageJson = (
             ]),
         ),
     },
-    dependencies: Object.fromEntries(
-        Object.entries({
-            ...COBALT_DEPENDENCIES,
-            ...additionalDeps,
-        }).sort(([a], [b]) => a.localeCompare(b)),
-    ),
+    dependencies: {
+        ...(config.withAuth
+            ? { "@cobalt27/auth": "latest", valibot: "1.1.0" }
+            : {}),
+        ...Object.fromEntries(
+            Object.entries({
+                ...COBALT_DEPENDENCIES,
+                ...additionalDeps,
+            }).sort(([a], [b]) => a.localeCompare(b)),
+        ),
+    },
     devDependencies: Object.fromEntries(
         Object.entries({
             ...COBALT_DEV_DEPENDENCIES,
@@ -146,12 +150,12 @@ export const generateBasePackageJson = (
 });
 
 // Shared Cobalt context
-export const generateCtxContent =
-    () => `export default async function ({ headers }: CobaltCtxInput) {
-    const userid: string = headers.get("Authorization") ?? "anonymous";
-
+export const generateCtxContent = (
+    config: ProjectConfigInitialized,
+) => `export default async function ({ headers }: CobaltCtxInput) {
+    ${config.withAuth ? "" : `const userid: string = headers.get("Authorization") ?? "anonymous"`}
     return {
-        userid,
+        ${config.withAuth ? "" : `userid,`}
         // Add your context here
         // Example: database connection, user session, etc.
     };
@@ -159,14 +163,16 @@ export const generateCtxContent =
 `;
 
 // Shared example GraphQL operation
-export const generateExampleOperation = () => `export function Query() {
+export const generateExampleOperation = (
+    config: ProjectConfigInitialized,
+) => `export function Query() {
     // Use $$ctx(this) helper function to get the GraphQL context value
     // this is fully typed and \`$$ctx\` is available in the global scope
 
-    const { userid } = $$ctx(this);
+    ${config.withAuth ? `const { token } = $$auth(this);` : `const { userid } = $$ctx(this);`}
 
     return {
-        user: userid,
+        user: ${config.withAuth ? `token.subject.properties.id` : `userid`},
         name: "Peter",
     };
 }
@@ -178,7 +184,9 @@ export const __typename = "UserProfile";
 `;
 
 // Shared UserProfile type extension
-export const generateUserProfileType = () => `export async function bio() {
+export const generateUserProfileType = (
+    config: ProjectConfigInitialized,
+) => `export async function bio() {
     // The $$root.TYPENAME(this) is a helper that returns the graphql \`root\` object
     // It serves as a typing helper but you have to choose the correct type name
     // yourself.
@@ -211,26 +219,110 @@ dist/
 *.log
 `;
 
+export const generateAuthContent = (
+    config: ProjectConfigInitialized,
+) => `import auth from "@cobalt27/auth";
+
+import { string } from "valibot";
+import { MemoryStorage } from "@openauthjs/openauth/storage/memory";
+
+import { CodeProvider } from "@openauthjs/openauth/provider/code";
+import { CodeUI } from "@openauthjs/openauth/ui/code";
+
+export default {
+    clientId: "client_id",
+    issuer: {
+        cobalt: auth({
+            models: {
+                user: {
+                    id: "String @id @default(ulid())",
+                },
+            },
+            tokens: {
+                user: {
+                    id: string(),
+                },
+            },
+            providers: {
+                code: CodeProvider<{ email: string }>(
+                    CodeUI({
+                        mode: "email",
+                        sendCode: async (email, code) => {
+                            console.log(email, code);
+                        },
+                    }),
+                ),
+            },
+            openauth: (sdk) => ({
+                storage: MemoryStorage({
+                    persist: "./persist.json",
+                }),
+                success: async (ctx, value) => {
+                    if (value.provider === "code") {
+                        const email = value.claims.email;
+
+                        const user = await sdk.mutation.adminAuthSignIn({
+                            user_id: email,
+                            claims: {
+                                email,
+                            },
+                            provider: "email",
+                        })(({ id }) => ({ id }));
+
+                        if (!user?.id) {
+                            throw new Error("User not found");
+                        }
+
+                        return ctx.subject("user", user);
+                    }
+
+                    throw new Error("Invalid provider");
+                },
+                ttl: {
+                    access: 60 * 60 * 24 * 30,
+                    refresh: 60 * 60 * 24 * 30 * 3,
+                },
+            }),
+        }),
+    },
+};
+`;
+
 // Shared base files that every template should include
 export const generateBaseFiles = (config: ProjectConfigInitialized) => {
     return [
+        ...[
+            config.withAuth
+                ? [
+                      {
+                          path: `${config.srcBaseDir}/server/auth.ts`,
+                          generator: () => generateAuthContent(config),
+                      },
+                      {
+                          path: `.env.local`,
+                          generator: () =>
+                              `OPENAUTH_ISSUER=http://localhost:4000`,
+                      },
+                  ]
+                : [],
+        ].flat(),
         {
             path: `${config.srcBaseDir}/server/ctx.ts`,
-            generator: () => generateCtxContent(),
+            generator: () => generateCtxContent(config),
         },
         {
             path: `${config.srcBaseDir}/server/operations/profile.ts`,
-            generator: () => generateExampleOperation(),
+            generator: () => generateExampleOperation(config),
         },
         {
             path: `${config.srcBaseDir}/server/types/UserProfile.ts`,
-            generator: () => generateUserProfileType(),
+            generator: () => generateUserProfileType(config),
         },
         {
             path: ".gitignore",
             generator: () => generateGitignore(),
         },
-    ];
+    ].filter(Boolean);
 };
 
 // Shared README generator
@@ -258,6 +350,11 @@ A Cobalt application with ${templateName}.
 3. Build for production:
    \`\`\`bash
    bun run build
+   \`\`\`
+
+4. Start the production server:
+   \`\`\`bash
+   bun run start
    \`\`\`
 
 ## Project Structure

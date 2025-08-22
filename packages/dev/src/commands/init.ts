@@ -13,6 +13,7 @@ type InitOptions = {
     name: string;
     dir: string;
     template?: string;
+    withAuth?: boolean;
 };
 
 // Configuration functions
@@ -24,6 +25,7 @@ const createProjectConfig = (options: InitOptions): ProjectConfig => {
         srcBaseDir: "src",
         projectDir,
         template: options.template,
+        withAuth: options.withAuth,
     };
 };
 
@@ -56,7 +58,7 @@ const createDirectoryStructure = async (config: ProjectConfigInitialized) => {
 };
 
 // File content generators
-const generatePackageJson = (projectName: string) => ({
+const generatePackageJson = (projectName: string, withAuth: boolean) => ({
     name: projectName,
     version: "0.1.0",
     type: "module",
@@ -66,7 +68,7 @@ const generatePackageJson = (projectName: string) => ({
     },
     dependencies: {
         "@cobalt27/runtime": "latest",
-        "@cobalt27/auth": "latest",
+        ...(withAuth ? { "@cobalt27/auth": "latest" } : {}),
         graphql: "^16.8.1",
         "graphql-sse": "^2.5.4",
         "@graphql-tools/schema": "^10.0.0",
@@ -185,7 +187,11 @@ const createProjectFiles = async (config: ProjectConfigInitialized) => {
         // Use default file generation
         writeFile(
             path.join(projectDir, "package.json"),
-            JSON.stringify(generatePackageJson(config.name), null, 4),
+            JSON.stringify(
+                generatePackageJson(config.name, config.withAuth ?? false),
+                null,
+                4,
+            ),
         );
 
         writeFile(
@@ -273,6 +279,7 @@ export const initCommand = (program: Command) => {
         .option("--name <name>", "Project name", "my-cobalt-app")
         .option("--dir <dir>", "Directory to create the project in", ".")
         .option("--template <template>", "Template to use (optional)")
+        .option("--with-auth", "Add Cobalt Auth to the project")
         .action(async (options) => {
             try {
                 const validatedTemplate = await validateTemplate(
