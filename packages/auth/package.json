@@ -13,6 +13,7 @@
         "!src/server/db/schema/@prisma/**/*",
         "!dist/**/__tests__/*",
         "!src/**/__tests__/*",
+        "react/**/*",
         "README.md",
         "package.json",
         "prisma.config.ts",
@@ -64,6 +65,7 @@
         "pglite-prisma-adapter": "^0.6.1",
         "prisma": "~6.13.0",
         "sst": "3.9.20",
+        "valibot": "1.1.0",
         "zenstack": "~2.18.0"
     }
 }
