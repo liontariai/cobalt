@@ -19,7 +19,7 @@
         "@remix-run/react": "^2.10.2",
         "@remix-run/serve": "^2.10.2",
         "@repeaterjs/react-hooks": "^0.1.1",
-        "@samarium.sdk/make": "^0.24.3",
+        "@samarium.sdk/make": "^0.24.4",
         "framer-motion": "^11.9.0",
         "isbot": "^4.1.0",
         "react": "^18.3.1",
@@ -43,14 +43,14 @@
     },
     "packages/auth": {
       "name": "@cobalt27/auth",
-      "version": "0.5.0-alpha.21",
+      "version": "0.5.0-alpha.22",
       "dependencies": {
         "@aws-sdk/client-sesv2": "^3.758.0",
         "@cobalt27/runtime": "workspace:*",
         "@electric-sql/pglite": "^0.3.4",
         "@openauthjs/openauth": "^0.4.3",
         "@prisma/client": "~6.13.0",
-        "@samarium.sdk/make": "^0.24.3",
+        "@samarium.sdk/make": "^0.24.4",
         "@zenstackhq/runtime": "~2.18.0",
         "@zenstackhq/sdk": "~2.18.0",
         "dotenv": "^17.2.0",
@@ -63,7 +63,7 @@
       },
       "devDependencies": {
         "@cobalt27/dev": "workspace:*",
-        "@samarium.sdk/new": "^0.24.2",
+        "@samarium.sdk/new": "^0.24.4",
         "@types/aws-lambda": "8.10.147",
         "@types/bun": "latest",
         "@types/node": "latest",
@@ -75,7 +75,7 @@
     },
     "packages/dev": {
       "name": "@cobalt27/dev",
-      "version": "0.5.0-alpha.21",
+      "version": "0.5.0-alpha.22",
       "bin": {
         "cobalt": "dist/esm/index.js",
       },
@@ -83,7 +83,7 @@
         "@cobalt27/generate": "workspace:*",
         "@cobalt27/runtime": "workspace:*",
         "@graphql-tools/schema": "^10.0.14",
-        "@samarium.sdk/make": "^0.24.3",
+        "@samarium.sdk/make": "^0.24.4",
         "commander": "^12.1.0",
         "comment-json": "^4.2.5",
         "graphql": "^16.8.1",
@@ -100,7 +100,7 @@
     },
     "packages/generate": {
       "name": "@cobalt27/generate",
-      "version": "0.5.0-alpha.21",
+      "version": "0.5.0-alpha.22",
       "dependencies": {
         "@cobalt27/runtime": "workspace:*",
       },
@@ -114,7 +114,7 @@
     },
     "packages/runtime": {
       "name": "@cobalt27/runtime",
-      "version": "0.5.0-alpha.21",
+      "version": "0.5.0-alpha.22",
       "devDependencies": {
         "@types/bun": "latest",
         "prettier": "latest",
@@ -513,9 +513,9 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.42.0", "", { "os": "win32", "cpu": "x64" }, "sha512-LpHiJRwkaVz/LqjHjK8LCi8osq7elmpwujwbXKNW88bM8eeGxavJIKKjkjpMHAh/2xfnrt1ZSnhTv41WYUHYmA=="],
 
-    "@samarium.sdk/make": ["@samarium.sdk/make@0.24.3", "", { "dependencies": { "graphql-request": "^7.1.0", "openapi-typescript": "^7.4.1" }, "peerDependencies": { "graphql": "^16.9.0", "typescript": "^5.0.0" } }, "sha512-DHYjV7n6EfFA5i5o4XXW8zgYV6D1LfituTFW+6EqegKTgrPhtP3sF3nLnIXsr9by3EBNEFNe5W2vveD4IrZfiA=="],
+    "@samarium.sdk/make": ["@samarium.sdk/make@0.24.4", "", { "dependencies": { "graphql-request": "^7.1.0", "openapi-typescript": "^7.4.1" }, "peerDependencies": { "graphql": "^16.9.0", "typescript": "^5.0.0" } }, "sha512-lEPJjWyD6H8LCYgs3aCTzQsCx/yU+xSdXHzrEl1BAzajaHoQ8BucnFwaMEqKLCZKd6MHBnV7eTJzNwAQEn4rnQ=="],
 
-    "@samarium.sdk/new": ["@samarium.sdk/new@0.24.2", "", { "dependencies": { "@inquirer/prompts": "^5.0.5", "commander": "^11.1.0", "detect-indent": "^7.0.1", "prettier": "^3.2.5", "yaml": "^2.6.0" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "samarium": "bin/samarium" } }, "sha512-a7GJa7F9zetBtfL14pY0YbF+YhjbHF42eOaKHz5CTNiZd89dtU0P3qqud+R7k/uWqIHKPIYmE6ww+Yz4VicbeQ=="],
+    "@samarium.sdk/new": ["@samarium.sdk/new@0.24.4", "", { "dependencies": { "@inquirer/prompts": "^5.0.5", "commander": "^11.1.0", "detect-indent": "^7.0.1", "prettier": "^3.2.5", "yaml": "^2.6.0" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "samarium": "bin/samarium" } }, "sha512-SjDBoVgsZPE00g9MCz1lv3+/ZCwZFSu/caSk/YYECkO2qBlU0L19rzHwfP2hQkOYfc3HZCv11YHH7Y1EzNf9WA=="],
 
     "@smithy/abort-controller": ["@smithy/abort-controller@4.0.4", "", { "dependencies": { "@smithy/types": "^4.3.1", "tslib": "^2.6.2" } }, "sha512-gJnEjZMvigPDQWHrW3oPrFhQtkrgqBkyjj3pCIdF3A5M6vsZODG93KNlfJprv6bp4245bdT32fsHK4kkH3KYDA=="],
 
