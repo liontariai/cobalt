@@ -1,2 +1,2 @@
 import "./register";
-export * from "./resolvers/graphql";
+export * from "./resolvers/graphql/index";
