@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma/generated/client/client";
 
 export async function Mutation(data: Omit<Prisma.TodoCreateInput, "ownerId">) {
     const { ownerId, prisma, pubsub } = $$ctx(this);
