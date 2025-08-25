@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { TrashIcon } from "@/components/icons/TrashIcon";
 
-import { TodoWithBy } from "sdk";
+import type { TodoWithBy } from "sdk";
 import { updateTodo, deleteTodo } from "./route";
 
 export const TodoItem = ({

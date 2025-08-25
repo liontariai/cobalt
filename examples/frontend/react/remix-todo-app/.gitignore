@@ -1,9 +1,0 @@
-node_modules/
-.cache/
-.cobalt/
-build/
-public/
-*.db
-
-.DS_Store
-persist.json

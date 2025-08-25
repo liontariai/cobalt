@@ -1,0 +1,19 @@
+.DS_Store
+node_modules/
+.cobalt/
+dist/
+.env
+*.log
+
+# React Router
+/.react-router/
+/build/
+
+.cache/
+*.db
+
+.DS_Store
+persist.json
+
+prisma/generated/
+prisma/pglite_data/

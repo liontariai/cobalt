@@ -1,4 +1,4 @@
-import sdk, { _, TodoWithBy } from "sdk";
+import sdk, { _, type TodoWithBy } from "sdk";
 import { useMemo, useState } from "react";
 import { TodoInput } from "@/routes/_index/TodoInput";
 import { TodoItem } from "@/routes/_index/TodoItem";
