@@ -1,6 +1,10 @@
 import type { ProjectConfigInitialized } from "../../index";
+import * as sharedFiles from "../files";
 
 export const files = {
+    "public/favicon.ico": (config: ProjectConfigInitialized) =>
+        Buffer.from(sharedFiles.files["public/favicon.ico"](config), "base64"),
+
     "app/app.css": (config: ProjectConfigInitialized) => `
 @import "tailwindcss";
 
