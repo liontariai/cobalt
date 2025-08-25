@@ -223,16 +223,6 @@ export const makeIdentityManagementPlatform = async ({
         },
     );
 
-    execSync(`bun --bun prisma generate --schema ${prismaSchema}`, {
-        env: {
-            ...process.env,
-            COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
-            COBALT_AUTH_DATABASE_URL: "memory://", //`file:${path.join(dbDir, "dev")}`,
-        },
-        cwd: cobaltAuthDir,
-        stdio: "ignore",
-    });
-
     // replace provider sqlite with postgresql
     const prismaSchemaContent = fs.readFileSync(prismaSchema, "utf-8");
     const prismaSchemaContentWithPostgresql = prismaSchemaContent.replace(
@@ -252,7 +242,14 @@ export const makeIdentityManagementPlatform = async ({
     await new Promise<void>((resolve, reject) => {
         const child = spawn(
             "bun",
-            ["--bun", "prisma", "db", "push", "--schema", prismaSchema],
+            [
+                "--bun",
+                "prisma",
+                "db",
+                "push",
+                "--schema",
+                prismaSchema,
+            ],
             {
                 env: {
                     ...process.env,
@@ -267,7 +264,10 @@ export const makeIdentityManagementPlatform = async ({
         child.stdout.on("data", (data) => {
             const str = data.toString();
             outputBuffer += str;
-            if (outputBuffer.includes("Done in")) {
+            if (
+                outputBuffer.includes("Done in") ||
+                outputBuffer.includes("The database is already in sync with the Prisma schema.")
+            ) {
                 done = true;
                 resolve();
             }
