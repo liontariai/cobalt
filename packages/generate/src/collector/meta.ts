@@ -181,6 +181,15 @@ export const gatherMeta = (
     );
     const checker = program.getTypeChecker();
 
+    const corruptedResolvers: {
+        resolverName: string;
+        error: string;
+    }[] = [];
+    const corruptedTypes: {
+        typeName: string;
+        error: string;
+    }[] = [];
+
     for (const file of files) {
         const originalSourceFile = program.getSourceFile(file);
         if (!originalSourceFile) continue;
@@ -258,9 +267,10 @@ export const gatherMeta = (
             const ret = resolverMeta.fields.find((f) => f.name === "return");
 
             if (!args || !ret) {
-                console.error(
-                    `Resolver ${resolverName} has no args or return type, there's something going veery wrong here!`,
-                );
+                corruptedResolvers.push({
+                    resolverName,
+                    error: `Resolver ${resolverName} has no args or return type, there's something going veery wrong here!\nYour file '${originalSourceFile.fileName}' has no effect on the schema.`,
+                });
                 continue;
             }
 
@@ -345,13 +355,17 @@ export const gatherMeta = (
             const typeMeta = collector.getType(typeName);
 
             if (!typeMeta) {
-                throw new Error(
-                    `Could not find '${typeName}' in collector. Only types can be extended, that were annotated using an 'export const __typename = ....' statement in the operation.`,
-                );
+                corruptedTypes.push({
+                    typeName,
+                    error: `Could not find '${typeName}' in collector. Only types can be extended, that were annotated using an 'export const __typename = ....' statement in the operation.\nYour file '${originalSourceFile.fileName}' has no effect on the schema.`,
+                });
+                continue;
             } else if (!typeMeta.isObject) {
-                throw new Error(
-                    `Right now only ObjectTypes can be extended. '${typeName}' is: isScalar=${typeMeta.isScalar}, isEnum=${typeMeta.isEnum}, isUnion=${typeMeta.isUnion}. tsTypeName=${typeMeta.tsTypeName}`,
-                );
+                corruptedTypes.push({
+                    typeName,
+                    error: `Right now only ObjectTypes can be extended. '${typeName}' is: isScalar=${typeMeta.isScalar}, isEnum=${typeMeta.isEnum}, isUnion=${typeMeta.isUnion}. tsTypeName=${typeMeta.tsTypeName}\nYour file '${originalSourceFile.fileName}' has no effect on the schema.`,
+                });
+                continue;
             }
 
             const args = resolverMeta.fields.find((f) => f.name === "args")!;
@@ -546,6 +560,39 @@ export const gatherMeta = (
             `${yellow}You can most likely ignore these, but some types might have defaulted to 'any' instead of the correct type.${reset}`,
         );
         console.warn(`${yellow}--------------------------------${reset}`);
+    }
+
+    if (corruptedResolvers.length > 0) {
+        const yellow = "\x1b[33m";
+        const reset = "\x1b[0m";
+        console.warn(`${yellow}--------------------------------${reset}`);
+        console.warn(
+            `${yellow}Corrupted resolvers: ${corruptedResolvers
+                .map((r) => r.resolverName)
+                .join(", ")}${reset}`,
+        );
+        console.warn(
+            `${yellow}Corrupted resolvers: ${corruptedResolvers
+                .map((r) => r.error)
+                .join("\n")}${reset}`,
+        );
+        console.warn(`${yellow}--------------------------------${reset}`);
+    }
+    if (corruptedTypes.length > 0) {
+        const red = "\x1b[31m";
+        const reset = "\x1b[0m";
+        console.warn(`${red}--------------------------------${reset}`);
+        console.warn(
+            `${red}Corrupted types: ${corruptedTypes
+                .map((t) => t.typeName)
+                .join(", ")}${reset}`,
+        );
+        console.warn(
+            `${red}Corrupted types: ${corruptedTypes
+                .map((t) => t.error)
+                .join("\n")}${reset}`,
+        );
+        console.warn(`${red}--------------------------------${reset}`);
     }
 
     return meta;
