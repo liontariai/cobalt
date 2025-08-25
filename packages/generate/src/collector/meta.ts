@@ -191,7 +191,11 @@ export const gatherMeta = (
                 resolverMeta = gatherMetaForType(
                     "",
                     { type: resolverType, symbol: resolverSymbol },
-                    { checker, sourceFile },
+                    {
+                        checker,
+                        sourceFile,
+                        rawCodeSourceFile: originalSourceFile,
+                    },
                     collector,
                     collectRenamedTypes,
                     [`${resolverName}:`],
@@ -290,7 +294,7 @@ export const gatherMeta = (
             const resolverMeta = gatherMetaForType(
                 "",
                 { type: resolverType, symbol: resolverSymbol },
-                { checker, sourceFile },
+                { checker, sourceFile, rawCodeSourceFile: originalSourceFile },
                 collector,
                 collectRenamedTypes,
                 [`${typeName}:`],
@@ -307,7 +311,7 @@ export const gatherMeta = (
                 );
             } else if (!typeMeta.isObject) {
                 throw new Error(
-                    `Right now only ObjectTypes can be extended. '${typeName}' is: isScalar=${typeMeta.isScalar}, isEnum=${typeMeta.isEnum}, isUnion=${typeMeta.isUnion}.`,
+                    `Right now only ObjectTypes can be extended. '${typeName}' is: isScalar=${typeMeta.isScalar}, isEnum=${typeMeta.isEnum}, isUnion=${typeMeta.isUnion}. tsTypeName=${typeMeta.tsTypeName}`,
                 );
             }
 
@@ -595,7 +599,11 @@ const makeProtocolFriendlyName = (
 };
 
 const makeIdentifyingTypeName = (
-    program: { checker: ts.TypeChecker; sourceFile: ts.SourceFile },
+    program: {
+        checker: ts.TypeChecker;
+        sourceFile: ts.SourceFile;
+        rawCodeSourceFile: ts.SourceFile;
+    },
     tsTypeAndSymbol: { type: ts.Type; symbol?: ts.Symbol },
     override: {
         isInput?: boolean;
@@ -628,6 +636,55 @@ const makeIdentifyingTypeName = (
             program.sourceFile,
             ts.TypeFormatFlags.NoTruncation,
         );
+
+        // If the type is 'any', check for type errors and print them
+        if (typeName === "any") {
+            try {
+                // Try to get more diagnostics by checking both syntactic and semantic diagnostics
+                const syntacticDiagnostics =
+                    (program.checker as any).getSyntacticDiagnostics?.(
+                        program.rawCodeSourceFile,
+                    ) || [];
+                const semanticDiagnostics =
+                    (program.checker as any).getSemanticDiagnostics?.(
+                        program.rawCodeSourceFile,
+                    ) || [];
+                const diagnostics = [
+                    ...((program.checker as any).getDiagnostics?.(
+                        program.rawCodeSourceFile,
+                    ) || []),
+                    ...syntacticDiagnostics,
+                    ...semanticDiagnostics,
+                ];
+                // Remove duplicates by diagnostic code and start position
+                const seen = new Set();
+                const uniqueDiagnostics = diagnostics.filter((diag: any) => {
+                    const key = `${diag.code}:${diag.start}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                if (uniqueDiagnostics.length > 0) {
+                    console.error(
+                        `TypeScript errors detected in file ${program.rawCodeSourceFile.fileName}:`,
+                    );
+                    uniqueDiagnostics.forEach((diag: any) => {
+                        const message =
+                            typeof diag.messageText === "string"
+                                ? diag.messageText
+                                : diag.messageText.messageText;
+                        console.error(
+                            `  [${diag.code}] ${message} (at position ${diag.start})`,
+                        );
+                        console.error(
+                            `    at: ${program.rawCodeSourceFile.fileName}:${diag.start}`,
+                        );
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
 
         if (typeName === "any") {
             typeName = "Record<string | number | symbol, unknown>";
@@ -705,7 +762,11 @@ export const gatherMetaForType = (
         symbol?: ts.Symbol;
         overrideIsNonNull?: boolean;
     },
-    program: { checker: ts.TypeChecker; sourceFile: ts.SourceFile },
+    program: {
+        checker: ts.TypeChecker;
+        sourceFile: ts.SourceFile;
+        rawCodeSourceFile: ts.SourceFile;
+    },
     collector: Collector,
     collectRenamedTypes: Map<string, string>,
     path: string[],
@@ -1502,7 +1563,11 @@ export const gatherMetaForField = (
         symbol?: ts.Symbol;
         overrideIsNonNull?: boolean;
     },
-    program: { checker: ts.TypeChecker; sourceFile: ts.SourceFile },
+    program: {
+        checker: ts.TypeChecker;
+        sourceFile: ts.SourceFile;
+        rawCodeSourceFile: ts.SourceFile;
+    },
     collector: Collector,
     collectRenamedTypes: Map<string, string>,
     path: string[],
