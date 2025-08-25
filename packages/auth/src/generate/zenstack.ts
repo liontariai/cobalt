@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { execSync, spawn } from "child_process";
+import { createHash } from "crypto";
+import { globSync } from "glob";
 import type { PrismaFields } from "../types";
 import { findNodeModulesDir } from "./helpers";
-
-import { $ } from "bun";
 
 export const makeIdentityManagementPlatform = async ({
     models,
@@ -19,8 +20,6 @@ export const makeIdentityManagementPlatform = async ({
 }) => {
     const cobaltAuthDir = path.join(findNodeModulesDir(), ".cobalt", "auth");
 
-    // await $`rm -rf ${cobaltAuthDir}`.quiet();
-
     const serverDir = path.join(cobaltAuthDir, "server");
     const dbDir = path.join(serverDir, "db");
     const zschemaDir = path.join(dbDir, "schema");
@@ -32,7 +31,6 @@ export const makeIdentityManagementPlatform = async ({
         process.env.COBALT_AUTH_DATABASE_URL || path.join(dbDir, "pglite_data");
     process.env.COBALT_AUTH_DATABASE_URL = pgliteDataDir; //`file:${path.join(dbDir, "dev")}`;
 
-    const hasher = new Bun.CryptoHasher("sha256");
     const fileHashes: Set<string> = new Set();
     // copy over template project
 
@@ -43,56 +41,69 @@ export const makeIdentityManagementPlatform = async ({
         "db",
         "schema",
     );
-    for (const p of new Bun.Glob(`${schemaDir}/**/*.zmodel`).scanSync()) {
-        const fname = p.split(path.sep).pop()!;
-        const f = Bun.file(p);
+
+    const schemaFiles = globSync(`${schemaDir}/**/*.zmodel`);
+    for (const p of schemaFiles) {
+        const fname = path.basename(p);
+        const fileContent = fs.readFileSync(p, "utf-8");
 
         const relPathFromSchemaDir = p.split(schemaDir)[1];
 
-        const hash = hasher.update(`${p}:${await f.text()}`).digest("hex");
+        const hash = createHash("sha256")
+            .update(`${p}:${fileContent}`)
+            .digest("hex");
         if (fileHashes.has(hash)) {
             continue;
         }
         fileHashes.add(hash);
 
         if (fname === "_schema.zmodel") {
-            await Bun.write(
-                path.join(zschemaDir, fname),
-                (await f.text())
-                    .replaceAll("DATABASE_URL", "COBALT_AUTH_DATABASE_URL")
-                    .replaceAll(
-                        "PRISMA_CLIENT_OUTPUT",
-                        "COBALT_AUTH_PRISMA_CLIENT_OUTPUT",
-                    ),
-            );
+            const modifiedContent = fileContent
+                .replaceAll("DATABASE_URL", "COBALT_AUTH_DATABASE_URL")
+                .replaceAll(
+                    "PRISMA_CLIENT_OUTPUT",
+                    "COBALT_AUTH_PRISMA_CLIENT_OUTPUT",
+                );
+
+            const _dir = path.join(zschemaDir, fname);
+            fs.mkdirSync(path.dirname(_dir), { recursive: true });
+            fs.writeFileSync(_dir, modifiedContent);
         } else {
-            await Bun.write(path.join(zschemaDir, relPathFromSchemaDir), f);
+            const _dir = path.join(zschemaDir, relPathFromSchemaDir);
+            fs.mkdirSync(path.dirname(_dir), { recursive: true });
+            fs.writeFileSync(_dir, fileContent);
         }
     }
 
     const serverOpsDir = path.join(serverDir, "operations");
     const copySourceServerDir = path.resolve(import.meta.dir, "..", "server");
 
-    for (const p of new Bun.Glob(`${copySourceServerDir}/**/*.ts`).scanSync()) {
+    const serverFiles = globSync(`${copySourceServerDir}/**/*.ts`);
+    for (const p of serverFiles) {
         if (p.startsWith(path.join(copySourceServerDir, "db"))) {
             continue;
         }
 
-        const f = Bun.file(p);
+        const fileContent = fs.readFileSync(p, "utf-8");
 
-        const hash = hasher.update(`${p}:${await f.text()}`).digest("hex");
+        const hash = createHash("sha256")
+            .update(`${p}:${fileContent}`)
+            .digest("hex");
         if (fileHashes.has(hash)) {
             continue;
         }
         fileHashes.add(hash);
 
-        await Bun.write(
-            path.join(serverDir, path.relative(copySourceServerDir, p)),
-            f,
+        const targetPath = path.join(
+            serverDir,
+            path.relative(copySourceServerDir, p),
         );
+        // Ensure target directory exists
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+        fs.writeFileSync(targetPath, fileContent);
     }
 
-    await Bun.write(
+    fs.writeFileSync(
         path.join(cobaltAuthDir, ".env.public"),
         `
         COBALT_AUTH_PRISMA_CLIENT_OUTPUT="${path.relative(cobaltAuthDir, prismaClient)}"
@@ -100,7 +111,7 @@ export const makeIdentityManagementPlatform = async ({
         `,
     );
 
-    await Bun.write(
+    fs.writeFileSync(
         path.join(cobaltAuthDir, "prisma.config.ts"),
         `
         import path from "node:path";
@@ -130,7 +141,7 @@ export const makeIdentityManagementPlatform = async ({
         `,
     );
 
-    await Bun.write(
+    fs.writeFileSync(
         path.join(cobaltAuthDir, "tsconfig.json"),
         `
         {
@@ -178,10 +189,14 @@ export const makeIdentityManagementPlatform = async ({
 
     const cachedHashesFile = path.join(cobaltAuthDir, "cached-hashes.json");
     const cachedHashes = fs.existsSync(cachedHashesFile)
-        ? new Set((await Bun.file(cachedHashesFile).json()) as string[])
+        ? new Set(
+              JSON.parse(
+                  fs.readFileSync(cachedHashesFile, "utf-8"),
+              ) as string[],
+          )
         : new Set();
     if (cachedHashes.union(fileHashes).size !== cachedHashes.size) {
-        await Bun.write(
+        fs.writeFileSync(
             cachedHashesFile,
             JSON.stringify(Array.from(fileHashes)),
         );
@@ -194,23 +209,32 @@ export const makeIdentityManagementPlatform = async ({
 
     const zenstackDir = path.join(serverDir, "db", "zenstack");
 
-    await $`bun --bun zenstack generate --schema ${zschemaPath} --output ${zenstackDir}`
-        .env({
-            ...process.env,
-            COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
-        })
-        .quiet();
-    await $`bun --bun prisma generate --schema ${prismaSchema}`
-        .env({
+    // Ensure zenstack directory exists
+    fs.mkdirSync(zenstackDir, { recursive: true });
+
+    execSync(
+        `bun --bun zenstack generate --schema ${zschemaPath} --output ${zenstackDir}`,
+        {
+            env: {
+                ...process.env,
+                COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
+            },
+            stdio: "ignore",
+        },
+    );
+
+    execSync(`bun --bun prisma generate --schema ${prismaSchema}`, {
+        env: {
             ...process.env,
             COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
             COBALT_AUTH_DATABASE_URL: "memory://", //`file:${path.join(dbDir, "dev")}`,
-        })
-        .cwd(cobaltAuthDir)
-        .quiet();
+        },
+        cwd: cobaltAuthDir,
+        stdio: "ignore",
+    });
 
     // replace provider sqlite with postgresql
-    const prismaSchemaContent = await Bun.file(prismaSchema).text();
+    const prismaSchemaContent = fs.readFileSync(prismaSchema, "utf-8");
     const prismaSchemaContentWithPostgresql = prismaSchemaContent.replace(
         'provider = "sqlite"',
         'provider = "postgresql"',
@@ -221,16 +245,54 @@ export const makeIdentityManagementPlatform = async ({
             'url      = env("COBALT_AUTH_DATABASE_URL")',
             'url      = "postgresql://"',
         );
-    await Bun.write(prismaSchema, prismaSchemaContentWithPostgresqlUrl);
+    fs.writeFileSync(prismaSchema, prismaSchemaContentWithPostgresqlUrl);
 
-    await $`bun --bun prisma db push --schema ${prismaSchema}`
-        .env({
-            ...process.env,
-            COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
-            COBALT_AUTH_DATABASE_URL: pgliteDataDir,
-        })
-        .cwd(cobaltAuthDir)
-        .quiet();
+    let outputBuffer = "";
+    let done = false;
+    await new Promise<void>((resolve, reject) => {
+        const child = spawn(
+            "bun",
+            ["--bun", "prisma", "db", "push", "--schema", prismaSchema],
+            {
+                env: {
+                    ...process.env,
+                    COBALT_AUTH_PRISMA_CLIENT_OUTPUT: prismaClient,
+                    COBALT_AUTH_DATABASE_URL: pgliteDataDir,
+                },
+                cwd: cobaltAuthDir,
+                stdio: ["ignore", "pipe", "pipe"],
+            },
+        );
+
+        child.stdout.on("data", (data) => {
+            const str = data.toString();
+            outputBuffer += str;
+            if (outputBuffer.includes("Done in")) {
+                done = true;
+                resolve();
+            }
+        });
+
+        child.stderr.on("data", (data) => {
+            const str = data.toString();
+            outputBuffer += str;
+        });
+
+        child.on("close", (code) => {
+            if (code !== 0) {
+                reject(
+                    new Error(
+                        `prisma db push exited with code ${code}\n${outputBuffer}`,
+                    ),
+                );
+            } else {
+                if (!done) {
+                    resolve();
+                }
+            }
+        });
+        child.on("error", reject);
+    });
 
     return serverOpsDir;
 };
