@@ -100,6 +100,7 @@ export const createProgram = (
     files: string[],
     rootDir: string,
     makeHelperTypesFactory: (fileName: string) => string,
+    handleResolveError?: (error: any) => void,
 ) => {
     const _options = getOptions(rootDir);
     const options = {
@@ -251,7 +252,7 @@ export const createProgram = (
                             redirectedReference,
                         );
                     } catch (err: any) {
-                        console.warn(err);
+                        handleResolveError?.(err);
                     }
                 }
 

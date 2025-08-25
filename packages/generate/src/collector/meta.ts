@@ -137,8 +137,47 @@ export const gatherMeta = (
             : []),
     ].filter(Boolean) as string[];
 
-    const program = createProgram(files, serverDir, (fileName) =>
-        makeHelperTypes(fileName, operationsDir, typesDir),
+    const notResolvableModules: {
+        moduleName: string;
+        fromPath?: string;
+    }[] = [];
+    const program = createProgram(
+        files,
+        serverDir,
+        (fileName) => makeHelperTypes(fileName, operationsDir, typesDir),
+        (error) => {
+            const message = error.message;
+            if (
+                message.includes("Cannot find module") ||
+                message.includes("Cannot find package")
+            ) {
+                const [_, __, ___, moduleName, fromPath]: string[] =
+                    message.match(
+                        /(.*?)(Cannot find module|Cannot find package) '([^']+)' from '([^']+)(.*)/,
+                    ) ?? [];
+                if (
+                    ![".cobalt/auth/oauth", ".cobalt/auth/sdk"].includes(
+                        moduleName,
+                    ) &&
+                    !fromPath.endsWith("$$types/index.ts") &&
+                    !fromPath.includes("node_modules/@types/node") &&
+                    !fromPath.includes("node_modules/bun-types")
+                ) {
+                    notResolvableModules.push({ moduleName, fromPath });
+                }
+            } else if (message.includes("No such built-in module:")) {
+                const [_, __, moduleName]: string[] =
+                    message.match(/(.*?)No such built-in module: (.*)$/) ?? [];
+
+                if (!moduleName.includes("node:")) {
+                    notResolvableModules.push({
+                        moduleName,
+                    });
+                }
+            } else {
+                console.error(error);
+            }
+        },
     );
     const checker = program.getTypeChecker();
 
@@ -490,6 +529,24 @@ export const gatherMeta = (
     }
 
     // ======= post-processing =======
+
+    if (notResolvableModules.length > 0) {
+        const yellow = "\x1b[33m";
+        const reset = "\x1b[0m";
+        console.warn(`${yellow}--------------------------------${reset}`);
+        console.warn(
+            `${yellow}Could not resolve the following modules: ${notResolvableModules
+                .map(
+                    (m) =>
+                        `'${m.moduleName}' from '${m.fromPath?.includes("node_modules") ? m.fromPath.split("node_modules/").pop() : m.fromPath?.replace(path.resolve(serverDir, ".."), "")}'`,
+                )
+                .join(", ")}${reset}`,
+        );
+        console.warn(
+            `${yellow}You can most likely ignore these, but some types might have defaulted to 'any' instead of the correct type.${reset}`,
+        );
+        console.warn(`${yellow}--------------------------------${reset}`);
+    }
 
     return meta;
 };
