@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/auth",
-    "version": "0.5.0-alpha.25",
+    "version": "0.5.0-alpha.27",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "type": "module",
@@ -60,6 +60,7 @@
         "@samarium.sdk/make": "^0.24.4",
         "@zenstackhq/runtime": "~2.18.0",
         "@zenstackhq/sdk": "~2.18.0",
+        "cookie": "^1.0.2",
         "dotenv": "^17.2.0",
         "hono": "^4.8.0",
         "pglite-prisma-adapter": "^0.6.1",

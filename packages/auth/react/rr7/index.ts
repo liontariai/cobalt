@@ -1,4 +1,5 @@
 import { createClient } from "@openauthjs/openauth/client";
+import { serialize as serializeCookie } from "cookie";
 import { type LoaderFunctionArgs, redirect } from "react-router";
 import type { BaseIssue, BaseSchema, StringSchema } from "valibot";
 import { object, string } from "valibot";
@@ -47,9 +48,7 @@ export function makeAuthLoader(
         cookieOptions?: {
             maxAge?: number;
             path?: string;
-            // httpOnly?: boolean;
             secure?: boolean;
-            sameSite?: "lax" | "strict" | "none";
         };
         cookieNames?: {
             accessToken: string;
@@ -59,21 +58,13 @@ export function makeAuthLoader(
     onAuth?: (data: {
         tokens: { access: string; refresh: string | undefined };
         request: Request;
-    }) => void,
-    onError?: (error: "invalid_token" | string) => Response | undefined,
+    }) => Response | undefined | void,
+    onError?: (error: "invalid_token" | string) => Response | undefined | void,
 ) {
     const authClient = createClient({
         clientID: options.clientID,
         issuer: options.issuer,
     });
-    const getCookie = (request: Request, name: string) => {
-        const cookie = request.headers.get("Cookie");
-        if (!cookie) return undefined;
-        return cookie
-            .split(";")
-            .find((c) => c.trim().startsWith(`${name}=`))
-            ?.split("=")[1];
-    };
 
     const subjects = options.subjects ?? {
         user: {
@@ -87,6 +78,11 @@ export function makeAuthLoader(
         ]),
     );
 
+    const accessTokenCookieName =
+        options.cookieNames?.accessToken ?? "accessToken";
+    const refreshTokenCookieName =
+        options.cookieNames?.refreshToken ?? "refreshToken";
+
     return async ({ request }: LoaderFunctionArgs) => {
         const url = new URL(request.url);
 
@@ -94,7 +90,8 @@ export function makeAuthLoader(
         // get the origin from the proxy headers
         const proxyHost = request.headers.get("X-Forwarded-Host");
         const proxyProto = request.headers.get("X-Forwarded-Proto");
-        if (proxyHost && proxyProto) {
+        const behindProxy = proxyHost && proxyProto;
+        if (behindProxy) {
             origin = `${proxyProto}${proxyProto.endsWith(":") ? "" : ":"}//${proxyHost}`;
         }
 
@@ -117,54 +114,55 @@ export function makeAuthLoader(
                     maxAge = 604_800,
                     path = "/",
                     secure = true,
-                    // httpOnly = true,
-                    sameSite = "strict",
                 } = options.cookieOptions ?? {};
 
-                const cookies: Record<
+                const cookiesMap: Record<
                     string,
-                    { value: string; httpOnly: boolean; secure: boolean }
+                    { value?: string; httpOnly: boolean; secure: boolean }
                 > = {
-                    [options.cookieNames?.accessToken ?? "accessToken"]: {
+                    [accessTokenCookieName]: {
                         value: token.tokens.access,
                         httpOnly: false,
-                        secure: false,
+                        secure,
                     },
-                    [options.cookieNames?.refreshToken ?? "refreshToken"]: {
+                    [refreshTokenCookieName]: {
                         value: token.tokens.refresh,
                         httpOnly: true,
                         secure,
                     },
                 };
-                const cookieString = Object.entries(cookies)
-                    .map(
-                        ([key, cookie]) =>
-                            `${key}=${cookie.value}; Max-Age=${maxAge}; Path=${path}; ${cookie.httpOnly ? "HttpOnly;" : ""} ${cookie.secure ? "Secure;" : ""} SameSite=${sameSite}`,
-                    )
-                    .join(", ");
 
-                onAuth?.({ tokens: token.tokens, request });
+                const headers = new Headers();
+                for (const [key, cookie] of Object.entries(cookiesMap)) {
+                    if (cookie.value) {
+                        headers.append(
+                            "Set-Cookie",
+                            serializeCookie(key, cookie.value, {
+                                maxAge,
+                                path,
+                                httpOnly: cookie.httpOnly,
+                                secure: cookie.secure,
+                            }),
+                        );
+                    }
+                }
 
-                return redirect(origin, {
-                    headers: {
-                        "Set-Cookie": cookieString,
-                    },
-                });
+                return (
+                    onAuth?.({ tokens: token.tokens, request }) ??
+                    redirect(origin, {
+                        headers,
+                    })
+                );
             }
         }
 
         if (error) {
-            return onError?.(error);
+            // display an error page and then redirect to the auth page
+            return onError?.(error) ?? null;
         }
 
-        const authToken = getCookie(
-            request,
-            options.cookieNames?.accessToken ?? "accessToken",
-        );
-        const refreshToken = getCookie(
-            request,
-            options.cookieNames?.refreshToken ?? "refreshToken",
-        );
+        const authToken = getCookie(accessTokenCookieName, request);
+        const refreshToken = getCookie(refreshTokenCookieName, request);
 
         if (authToken) {
             const result = await authClient.verify(subjectSchema, authToken, {
@@ -182,21 +180,40 @@ export function makeAuthLoader(
                     );
                 }
 
+                const headers = new Headers();
+                headers.append(
+                    "Set-Cookie",
+                    serializeCookie(accessTokenCookieName, "", {
+                        maxAge: 0,
+                        path: "/",
+                        httpOnly: false,
+                        secure: true,
+                    }),
+                );
+                headers.append(
+                    "Set-Cookie",
+                    serializeCookie(refreshTokenCookieName, "", {
+                        maxAge: 0,
+                        path: "/",
+                        httpOnly: true,
+                        secure: true,
+                    }),
+                );
+
                 return redirect(origin + "?callback=auth&error=invalid_token", {
-                    headers: {
-                        "Set-Cookie": [
-                            `${options.cookieNames?.accessToken ?? "accessToken"}=; Max-Age=0; Path=/`,
-                            `${options.cookieNames?.refreshToken ?? "refreshToken"}=; Max-Age=0; Path=/`,
-                        ].join(", "),
-                    },
+                    headers,
                 });
             }
 
-            onAuth?.({
-                tokens: { access: authToken, refresh: refreshToken },
-                request,
-            });
-            return null;
+            return (
+                onAuth?.({
+                    tokens: {
+                        access: authToken,
+                        refresh: refreshToken,
+                    },
+                    request,
+                }) ?? null
+            );
         }
 
         if (!authToken) {
@@ -207,10 +224,11 @@ export function makeAuthLoader(
             return redirect(authUrl);
         }
 
-        onAuth?.({
-            tokens: { access: authToken, refresh: refreshToken },
-            request,
-        });
-        return null;
+        return (
+            onAuth?.({
+                tokens: { access: authToken, refresh: refreshToken },
+                request,
+            }) ?? null
+        );
     };
 }
