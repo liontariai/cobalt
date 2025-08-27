@@ -1,13 +1,13 @@
-import type { BaseIssue, BaseSchema, StringSchema } from "valibot";
-import { type LoaderFunctionArgs, redirect } from "react-router";
 import { createClient } from "@openauthjs/openauth/client";
+import { type LoaderFunctionArgs, redirect } from "react-router";
+import type { BaseIssue, BaseSchema, StringSchema } from "valibot";
 import { object, string } from "valibot";
 
-export function getAuthToken(
-    request?: Request,
+export function getCookie(
     cookieName: string = "accessToken",
+    request?: Request,
 ) {
-    const getCookie = (cookie: string, name: string) => {
+    const _getCookie = (cookie: string, name: string) => {
         if (!cookie) return undefined;
         return cookie
             .split(";")
@@ -16,18 +16,25 @@ export function getAuthToken(
     };
 
     if (typeof document !== "undefined") {
-        return getCookie(document.cookie, cookieName);
+        return _getCookie(document.cookie, cookieName);
     }
 
     if (request) {
-        return getCookie(request.headers.get("Cookie") ?? "", cookieName);
+        return _getCookie(request.headers.get("Cookie") ?? "", cookieName);
     }
 
     return undefined;
 }
+export function accessTokenFromCookie(
+    cookieName: string = "accessToken",
+    request?: Request,
+) {
+    return getCookie(cookieName, request);
+}
 
 export function makeAuthLoader(
     options: {
+        unprotectedPaths?: string[];
         clientID: string;
         issuer: string;
         subjects?: {
@@ -49,9 +56,11 @@ export function makeAuthLoader(
             refreshToken: string;
         };
     },
-    onAuth?: (token: {
+    onAuth?: (data: {
         tokens: { access: string; refresh: string | undefined };
+        request: Request;
     }) => void,
+    onError?: (error: "invalid_token" | string) => Response | undefined,
 ) {
     const authClient = createClient({
         clientID: options.clientID,
@@ -80,6 +89,19 @@ export function makeAuthLoader(
 
     return async ({ request }: LoaderFunctionArgs) => {
         const url = new URL(request.url);
+
+        let origin = url.origin;
+        // get the origin from the proxy headers
+        const proxyHost = request.headers.get("X-Forwarded-Host");
+        const proxyProto = request.headers.get("X-Forwarded-Proto");
+        if (proxyHost && proxyProto) {
+            origin = `${proxyProto}${proxyProto.endsWith(":") ? "" : ":"}//${proxyHost}`;
+        }
+
+        if (options.unprotectedPaths?.includes(url.pathname)) {
+            return null;
+        }
+
         const callback = url.searchParams.get("callback");
         const code = url.searchParams.get("code");
         const error = url.searchParams.get("error");
@@ -87,7 +109,7 @@ export function makeAuthLoader(
         if (callback === "auth" && code) {
             const token = await authClient.exchange(
                 code,
-                url.origin + "?callback=auth",
+                origin + "?callback=auth",
             );
 
             if (!token.err) {
@@ -121,15 +143,18 @@ export function makeAuthLoader(
                     )
                     .join(", ");
 
-                onAuth?.(token);
+                onAuth?.({ tokens: token.tokens, request });
 
-                return redirect(url.origin, {
+                return redirect(origin, {
                     headers: {
                         "Set-Cookie": cookieString,
                     },
                 });
             }
-            // handle error
+        }
+
+        if (error) {
+            return onError?.(error);
         }
 
         const authToken = getCookie(
@@ -157,37 +182,35 @@ export function makeAuthLoader(
                     );
                 }
 
-                return redirect(
-                    url.origin + "?callback=auth&error=invalid_token",
-                    {
-                        headers: {
-                            "Set-Cookie": [
-                                `${options.cookieNames?.accessToken ?? "accessToken"}=; Max-Age=0; Path=/`,
-                                `${options.cookieNames?.refreshToken ?? "refreshToken"}=; Max-Age=0; Path=/`,
-                            ].join(", "),
-                        },
+                return redirect(origin + "?callback=auth&error=invalid_token", {
+                    headers: {
+                        "Set-Cookie": [
+                            `${options.cookieNames?.accessToken ?? "accessToken"}=; Max-Age=0; Path=/`,
+                            `${options.cookieNames?.refreshToken ?? "refreshToken"}=; Max-Age=0; Path=/`,
+                        ].join(", "),
                     },
-                );
+                });
             }
 
-            onAuth?.({ tokens: { access: authToken, refresh: refreshToken } });
+            onAuth?.({
+                tokens: { access: authToken, refresh: refreshToken },
+                request,
+            });
             return null;
-        }
-
-        if (error) {
-            // display an error page and then redirect to the auth page
-            console.error(error);
         }
 
         if (!authToken) {
             const { url: authUrl } = await authClient.authorize(
-                url.origin + "?callback=auth",
+                origin + "?callback=auth",
                 "code",
             );
             return redirect(authUrl);
         }
 
-        onAuth?.({ tokens: { access: authToken, refresh: refreshToken } });
+        onAuth?.({
+            tokens: { access: authToken, refresh: refreshToken },
+            request,
+        });
         return null;
     };
 }
