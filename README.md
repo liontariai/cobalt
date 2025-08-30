@@ -266,17 +266,6 @@ export const loader = makeAuthLoader(
   {
     clientID: "client_id", // name your client id here
     issuer: "http://localhost:4000", // url of cobalt auth
-    // the default subject schema is:
-    // the id is required, but you can add other fields here
-    // however, it has to match the configuration on the server side in the cobalt auth config
-    // see the auth.ts file in the cobalt server directory
-    // subjects: {
-    //   user: {
-    //     id: string(),
-    //   },
-    // },
-
-    // you can specify paths that should be ignored by the auth loader
     unprotectedPaths: ["/error", "/logout"],
   },
   (tokens) => {
