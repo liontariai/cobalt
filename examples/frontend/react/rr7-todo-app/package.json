@@ -18,9 +18,9 @@
         "prettier": "prettier --write ."
     },
     "dependencies": {
-        "@cobalt27/auth": "workspace:*",
-        "@cobalt27/dev": "workspace:*",
-        "@cobalt27/runtime": "workspace:*",
+        "@cobalt27/auth": "latest",
+        "@cobalt27/dev": "latest",
+        "@cobalt27/runtime": "latest",
         "@graphql-tools/schema": "^10.0.0",
         "@prisma/client": "^6.14.0",
         "@react-router/node": "^7.5.3",

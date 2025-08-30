@@ -6,11 +6,18 @@ import { Prisma } from "../../prisma/generated/client/client";
  * @returns The todos
  */
 export async function* Subscription(where: Prisma.TodoWhereInput) {
-    const { ownerId, pubsub } = $$ctx(this);
+    const { pubsub } = $$ctx(this);
+    const {
+        token: {
+            subject: {
+                properties: { email },
+            },
+        },
+    } = $$auth(this);
 
     for await (const todo of await pubsub.todos.asyncIterator("todos")) {
         // only stream todos from other users
-        if (todo.ownerId !== ownerId) {
+        if (todo.ownerId !== email) {
             yield {
                 id: todo.id,
                 text: todo.text,

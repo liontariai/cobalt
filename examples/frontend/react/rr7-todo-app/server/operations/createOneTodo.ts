@@ -1,12 +1,19 @@
 import { Prisma } from "../../prisma/generated/client/client";
 
 export async function Mutation(data: Omit<Prisma.TodoCreateInput, "ownerId">) {
-    const { ownerId, prisma, pubsub } = $$ctx(this);
+    const { prisma, pubsub } = $$ctx(this);
+    const {
+        token: {
+            subject: {
+                properties: { email },
+            },
+        },
+    } = $$auth(this);
 
     const todo = await prisma.todo.create({
         data: {
             ...data,
-            ownerId,
+            ownerId: email,
         },
     });
 
