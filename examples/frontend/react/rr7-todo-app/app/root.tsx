@@ -4,17 +4,20 @@ import {
     Links,
     Meta,
     Outlet,
+    redirect,
     Scripts,
     ScrollRestoration,
 } from "react-router";
-import { makeAuthLoader, getAuthToken } from "@cobalt27/auth/react/rr7";
+import {
+    makeAuthLoader,
+    accessTokenFromCookie,
+} from "@cobalt27/auth/react/rr7";
 import sdk from "sdk";
 
 import "./app.css";
 sdk.init({
-    auth: getAuthToken,
+    auth: accessTokenFromCookie,
 });
-
 
 export const loader = makeAuthLoader(
     {
@@ -29,12 +32,16 @@ export const loader = makeAuthLoader(
         //     id: string(),
         //   },
         // },
+        unprotectedPaths: ["/error", "/logout"],
     },
     (tokens) => {
         sdk.init({
             auth: tokens.tokens.access,
         });
-    }
+    },
+    (error) => {
+        return redirect("/error" + "?error=" + error);
+    },
 );
 
 export const links: Route.LinksFunction = () => [

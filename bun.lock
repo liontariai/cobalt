@@ -13,9 +13,9 @@
       "name": "rr7-todo-app",
       "version": "0.1.0",
       "dependencies": {
-        "@cobalt27/auth": "workspace:*",
-        "@cobalt27/dev": "workspace:*",
-        "@cobalt27/runtime": "workspace:*",
+        "@cobalt27/auth": "latest",
+        "@cobalt27/dev": "latest",
+        "@cobalt27/runtime": "latest",
         "@graphql-tools/schema": "^10.0.0",
         "@prisma/client": "^6.14.0",
         "@react-router/node": "^7.5.3",
@@ -49,7 +49,7 @@
     },
     "packages/auth": {
       "name": "@cobalt27/auth",
-      "version": "0.5.0-alpha.24",
+      "version": "0.5.0-alpha.27",
       "dependencies": {
         "@aws-sdk/client-sesv2": "^3.758.0",
         "@cobalt27/runtime": "workspace:*",
@@ -59,6 +59,7 @@
         "@samarium.sdk/make": "^0.24.4",
         "@zenstackhq/runtime": "~2.18.0",
         "@zenstackhq/sdk": "~2.18.0",
+        "cookie": "^1.0.2",
         "dotenv": "^17.2.0",
         "hono": "^4.8.0",
         "pglite-prisma-adapter": "^0.6.1",
@@ -1425,6 +1426,14 @@
 
     "@babel/helper-create-class-features-plugin/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
+    "@cobalt27/auth/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
+
+    "@cobalt27/dev/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
+
+    "@cobalt27/generate/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
+
+    "@cobalt27/runtime/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
+
     "@inquirer/core/@inquirer/type": ["@inquirer/type@2.0.0", "", { "dependencies": { "mute-stream": "^1.0.0" } }, "sha512-XvJRx+2KR3YXyYtPUUy+qd9i7p+GO9Ko6VIIpWlBrpWwXDv8WLFeHTxz35CfQFUiBMLXlGHhGzys7lqit9gWag=="],
 
     "@inquirer/core/@types/node": ["@types/node@22.17.2", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-gL6z5N9Jm9mhY+U2KXZpteb+09zyffliRkZyZOHODGATyC5B1Jt/7TzuuiLkFsSUMLbS1OLmlj/E+/3KF4Q/4w=="],
@@ -1541,6 +1550,12 @@
 
     "restore-cursor/signal-exit": ["signal-exit@3.0.7", "", {}, "sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ=="],
 
+    "rr7-todo-app/@cobalt27/auth": ["@cobalt27/auth@0.5.0-alpha.27", "", { "dependencies": { "@aws-sdk/client-sesv2": "^3.758.0", "@cobalt27/runtime": "0.5.0-alpha.23", "@electric-sql/pglite": "^0.3.7", "@openauthjs/openauth": "^0.4.3", "@prisma/client": "~6.13.0", "@samarium.sdk/make": "^0.24.4", "@zenstackhq/runtime": "~2.18.0", "@zenstackhq/sdk": "~2.18.0", "cookie": "^1.0.2", "dotenv": "^17.2.0", "hono": "^4.8.0", "pglite-prisma-adapter": "^0.6.1", "prisma": "~6.13.0", "sst": "3.9.20", "valibot": "1.1.0", "zenstack": "~2.18.0" }, "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-qEmunVGUVz1KjoWvYfgiSP+hy61FRoSOURP5z9/4pv+OdZlm3/KyIxF1xus7iKKem4jEaAcrw2zotdHquNO5zQ=="],
+
+    "rr7-todo-app/@cobalt27/dev": ["@cobalt27/dev@0.5.0-alpha.23", "", { "dependencies": { "@cobalt27/generate": "0.5.0-alpha.23", "@cobalt27/runtime": "0.5.0-alpha.23", "@graphql-tools/schema": "^10.0.14", "@samarium.sdk/make": "^0.24.4", "commander": "^12.1.0", "comment-json": "^4.2.5", "graphql": "^16.8.1", "graphql-sse": "^2.5.4", "hono": "^4.8.0", "prettier": "^3.5.3" }, "peerDependencies": { "typescript": "~5.7.3" }, "bin": { "cobalt": "dist/esm/index.js" } }, "sha512-2cW2FwmFCNmm3pjIfyGFKnFSRsuuZqj6ewHBGvOf40QaP0vE7UOMjfyiuRTPogYF+5kNgdhSD0zHnQ6HDevJIw=="],
+
+    "rr7-todo-app/@cobalt27/runtime": ["@cobalt27/runtime@0.5.0-alpha.23", "", { "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-r7t4uQMkKljr7p8y80Gb6/sY8aA8uHosVbzOVhLdHG6t9GZnJ3QlDYPx+MKSunW+NsK2ZfmQ56b88KAiWkhHiw=="],
+
     "rr7-todo-app/@prisma/client": ["@prisma/client@6.14.0", "", { "peerDependencies": { "prisma": "*", "typescript": ">=5.1.0" }, "optionalPeers": ["prisma", "typescript"] }, "sha512-8E/Nk3eL5g7RQIg/LUj1ICyDmhD053STjxrPxUtCRybs2s/2sOEcx9NpITuAOPn07HEpWBfhAVe1T/HYWXUPOw=="],
 
     "rr7-todo-app/@types/node": ["@types/node@20.19.11", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-uug3FEEGv0r+jrecvUUpbY8lLisvIjg6AAic6a2bSP5OEOLeJsDSnvhCDov7ipFFMXS3orMpzlmi0ZcuGkBbow=="],
@@ -1597,6 +1612,20 @@
 
     "read-pkg/normalize-package-data/hosted-git-info": ["hosted-git-info@7.0.2", "", { "dependencies": { "lru-cache": "^10.0.1" } }, "sha512-puUZAUKT5m8Zzvs72XWy3HtvVbTWljRE66cP60bxJzAqf2DgICo7lYTY2IHUmLnNpjYvw5bvmoHvPc0QO2a62w=="],
 
+    "rr7-todo-app/@cobalt27/auth/@cobalt27/runtime": ["@cobalt27/runtime@workspace:packages/runtime"],
+
+    "rr7-todo-app/@cobalt27/auth/@prisma/client": ["@prisma/client@6.13.0", "", { "peerDependencies": { "prisma": "*", "typescript": ">=5.1.0" }, "optionalPeers": ["prisma", "typescript"] }, "sha512-8m2+I3dQovkV8CkDMluiwEV1TxV9EXdT6xaCz39O6jYw7mkf5gwfmi+cL4LJsEPwz5tG7sreBwkRpEMJedGYUQ=="],
+
+    "rr7-todo-app/@cobalt27/auth/prisma": ["prisma@6.13.0", "", { "dependencies": { "@prisma/config": "6.13.0", "@prisma/engines": "6.13.0" }, "peerDependencies": { "typescript": ">=5.1.0" }, "optionalPeers": ["typescript"], "bin": { "prisma": "build/index.js" } }, "sha512-dfzORf0AbcEyyzxuv2lEwG8g+WRGF/qDQTpHf/6JoHsyF5MyzCEZwClVaEmw3WXcobgadosOboKUgQU0kFs9kw=="],
+
+    "rr7-todo-app/@cobalt27/auth/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
+
+    "rr7-todo-app/@cobalt27/dev/@cobalt27/runtime": ["@cobalt27/runtime@workspace:packages/runtime"],
+
+    "rr7-todo-app/@cobalt27/dev/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
+
+    "rr7-todo-app/@cobalt27/runtime/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
+
     "rr7-todo-app/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "rr7-todo-app/prisma/@prisma/config": ["@prisma/config@6.14.0", "", { "dependencies": { "c12": "3.1.0", "deepmerge-ts": "7.1.5", "effect": "3.16.12", "empathic": "2.0.0" } }, "sha512-IwC7o5KNNGhmblLs23swnfBjADkacBb7wvyDXUWLwuvUQciKJZqyecU0jw0d7JRkswrj+XTL8fdr0y2/VerKQQ=="],
@@ -1614,6 +1643,10 @@
     "langium/vscode-languageserver/vscode-languageserver-protocol/vscode-languageserver-types": ["vscode-languageserver-types@3.17.2", "", {}, "sha512-zHhCWatviizPIq9B7Vh9uvrH6x3sK8itC84HkamnBWoDFJtzBf7SWlpLCZUit72b3os45h6RWQNC9xHRDF8dRA=="],
 
     "read-pkg/normalize-package-data/hosted-git-info/lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
+
+    "rr7-todo-app/@cobalt27/auth/@cobalt27/runtime/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
+
+    "rr7-todo-app/@cobalt27/dev/@cobalt27/runtime/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
 
     "rr7-todo-app/prisma/@prisma/engines/@prisma/engines-version": ["@prisma/engines-version@6.14.0-25.717184b7b35ea05dfa71a3236b7af656013e1e49", "", {}, "sha512-EgN9ODJpiX45yvwcngoStp3uQPJ3l+AEVoQ6dMMO2QvmwIlnxfApzKmJQExzdo7/hqQANrz5txHJdGYHzOnGHA=="],
   }

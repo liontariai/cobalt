@@ -4,6 +4,7 @@ import { TodoInput } from "@/routes/_index/TodoInput";
 import { TodoItem } from "@/routes/_index/TodoItem";
 import { useAsyncIterable } from "@/hooks/useAsyncGen";
 import useSWR from "swr";
+import { Link } from "react-router-dom";
 
 export const getTodos = sdk.query.todos(_)((s) => s.$all({})).$lazy;
 export const createTodo = sdk.mutation.createOneTodo(_)((s) =>
@@ -21,13 +22,6 @@ export const streamTodos = sdk.subscription.streamTodos(_)((s) =>
 ).$lazy;
 
 export default function Index() {
-    const [userId, setUserId] = useState(() => {
-        if (typeof window === "undefined") {
-            return "";
-        }
-        return window.localStorage.getItem("userid") ?? "";
-    });
-
     const [searchText, setSearchText] = useState("");
     const [todoText, setTodoText] = useState("");
     const [showError, setShowError] = useState(false);
@@ -73,31 +67,12 @@ export default function Index() {
 
     return (
         <div className="relative min-h-screen bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center p-4">
-            <div className="absolute top-4 right-4">
-                <input
-                    type="text"
-                    placeholder="Enter username"
-                    value={userId}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        if (value) {
-                            setUserId(value);
-                        } else {
-                            setUserId("");
-                        }
-
-                        if (typeof window !== "undefined") {
-                            window.localStorage.setItem("userid", value);
-                            sdk.init({
-                                headers: {
-                                    Authorization: value,
-                                },
-                            });
-                        }
-                    }}
-                    className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                />
-            </div>
+            <Link
+                to="/logout"
+                className="absolute top-4 right-4 text-black text-sm rounded-md p-2 bg-white/80 hover:bg-red-600 hover:text-white transition-colors duration-300"
+            >
+                Logout
+            </Link>
             <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl">
                 <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">
                     Beautiful Todo App

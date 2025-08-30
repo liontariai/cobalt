@@ -8,13 +8,20 @@ import { Prisma } from "../../prisma/generated/client/client";
 export async function Query(
     where?: Omit<Prisma.TodoWhereInput, "AND" | "OR" | "NOT" | "ownerId">,
 ) {
-    const { ownerId, prisma } = $$ctx(this);
+    const { prisma } = $$ctx(this);
+    const {
+        token: {
+            subject: {
+                properties: { email },
+            },
+        },
+    } = $$auth(this);
 
     return (
         await prisma.todo.findMany({
             where: {
                 ...where,
-                ownerId,
+                ownerId: email,
             },
         })
     ).map((todo) => ({

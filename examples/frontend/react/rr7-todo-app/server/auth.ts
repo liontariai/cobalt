@@ -18,6 +18,7 @@ export default {
             tokens: {
                 user: {
                     id: string(),
+                    email: string(),
                 },
             },
             providers: {
@@ -50,7 +51,7 @@ export default {
                             throw new Error("User not found");
                         }
 
-                        return ctx.subject("user", user);
+                        return ctx.subject("user", { id: user.id, email });
                     }
 
                     throw new Error("Invalid provider");

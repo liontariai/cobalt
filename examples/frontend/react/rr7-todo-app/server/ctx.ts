@@ -14,13 +14,10 @@ const pubSubTodos = new PubSub<Todo>();
 
 export default async function ctx({ headers }: { headers: Headers }) {
     const prisma = new PrismaClient({ adapter });
-    const ownerId = headers.get("Authorization")!;
 
     return {
         headers,
         prisma,
-
-        ownerId,
 
         pubsub: {
             todos: pubSubTodos,
