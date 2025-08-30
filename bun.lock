@@ -49,7 +49,7 @@
     },
     "packages/auth": {
       "name": "@cobalt27/auth",
-      "version": "0.5.0-alpha.28",
+      "version": "0.5.0",
       "dependencies": {
         "@aws-sdk/client-sesv2": "^3.758.0",
         "@cobalt27/runtime": "workspace:*",
@@ -82,7 +82,7 @@
     },
     "packages/dev": {
       "name": "@cobalt27/dev",
-      "version": "0.5.0-alpha.28",
+      "version": "0.5.0",
       "bin": {
         "cobalt": "dist/esm/index.js",
       },
@@ -107,7 +107,7 @@
     },
     "packages/generate": {
       "name": "@cobalt27/generate",
-      "version": "0.5.0-alpha.28",
+      "version": "0.5.0",
       "dependencies": {
         "@cobalt27/runtime": "workspace:*",
       },
@@ -121,7 +121,7 @@
     },
     "packages/runtime": {
       "name": "@cobalt27/runtime",
-      "version": "0.5.0-alpha.28",
+      "version": "0.5.0",
       "devDependencies": {
         "@types/bun": "latest",
         "prettier": "latest",
@@ -1550,11 +1550,11 @@
 
     "restore-cursor/signal-exit": ["signal-exit@3.0.7", "", {}, "sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ=="],
 
-    "rr7-todo-app/@cobalt27/auth": ["@cobalt27/auth@0.5.0-alpha.27", "", { "dependencies": { "@aws-sdk/client-sesv2": "^3.758.0", "@cobalt27/runtime": "0.5.0-alpha.23", "@electric-sql/pglite": "^0.3.7", "@openauthjs/openauth": "^0.4.3", "@prisma/client": "~6.13.0", "@samarium.sdk/make": "^0.24.4", "@zenstackhq/runtime": "~2.18.0", "@zenstackhq/sdk": "~2.18.0", "cookie": "^1.0.2", "dotenv": "^17.2.0", "hono": "^4.8.0", "pglite-prisma-adapter": "^0.6.1", "prisma": "~6.13.0", "sst": "3.9.20", "valibot": "1.1.0", "zenstack": "~2.18.0" }, "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-qEmunVGUVz1KjoWvYfgiSP+hy61FRoSOURP5z9/4pv+OdZlm3/KyIxF1xus7iKKem4jEaAcrw2zotdHquNO5zQ=="],
+    "rr7-todo-app/@cobalt27/auth": ["@cobalt27/auth@0.5.0-alpha.28", "", { "dependencies": { "@aws-sdk/client-sesv2": "^3.758.0", "@cobalt27/runtime": "0.5.0-alpha.28", "@electric-sql/pglite": "^0.3.7", "@openauthjs/openauth": "^0.4.3", "@prisma/client": "~6.13.0", "@samarium.sdk/make": "^0.24.4", "@zenstackhq/runtime": "~2.18.0", "@zenstackhq/sdk": "~2.18.0", "cookie": "^1.0.2", "dotenv": "^17.2.0", "hono": "^4.8.0", "pglite-prisma-adapter": "^0.6.1", "prisma": "~6.13.0", "sst": "3.9.20", "valibot": "1.1.0", "zenstack": "~2.18.0" }, "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-NSYtfgWClDfFOb/izLmn+NL//XkmDQPOvirAX9djZexpvXTUIj+VRzcNOWYLJx8dDbWwRVpEaCUUxXYAiU+HQw=="],
 
-    "rr7-todo-app/@cobalt27/dev": ["@cobalt27/dev@0.5.0-alpha.23", "", { "dependencies": { "@cobalt27/generate": "0.5.0-alpha.23", "@cobalt27/runtime": "0.5.0-alpha.23", "@graphql-tools/schema": "^10.0.14", "@samarium.sdk/make": "^0.24.4", "commander": "^12.1.0", "comment-json": "^4.2.5", "graphql": "^16.8.1", "graphql-sse": "^2.5.4", "hono": "^4.8.0", "prettier": "^3.5.3" }, "peerDependencies": { "typescript": "~5.7.3" }, "bin": { "cobalt": "dist/esm/index.js" } }, "sha512-2cW2FwmFCNmm3pjIfyGFKnFSRsuuZqj6ewHBGvOf40QaP0vE7UOMjfyiuRTPogYF+5kNgdhSD0zHnQ6HDevJIw=="],
+    "rr7-todo-app/@cobalt27/dev": ["@cobalt27/dev@0.5.0-alpha.28", "", { "dependencies": { "@cobalt27/generate": "0.5.0-alpha.28", "@cobalt27/runtime": "0.5.0-alpha.28", "@graphql-tools/schema": "^10.0.14", "@samarium.sdk/make": "^0.24.4", "commander": "^12.1.0", "comment-json": "^4.2.5", "graphql": "^16.8.1", "graphql-sse": "^2.5.4", "hono": "^4.8.0", "prettier": "^3.5.3" }, "peerDependencies": { "typescript": "~5.7.3" }, "bin": { "cobalt": "dist/esm/index.js" } }, "sha512-c06F8e3A4CrDuJCVLi9HkRxURHM2qyFIpAZdzoai13A6eeUJTdtOOOZ2kUsenZ3ZJ0PSyY3lu9dk+VsatWiBJw=="],
 
-    "rr7-todo-app/@cobalt27/runtime": ["@cobalt27/runtime@0.5.0-alpha.23", "", { "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-r7t4uQMkKljr7p8y80Gb6/sY8aA8uHosVbzOVhLdHG6t9GZnJ3QlDYPx+MKSunW+NsK2ZfmQ56b88KAiWkhHiw=="],
+    "rr7-todo-app/@cobalt27/runtime": ["@cobalt27/runtime@0.5.0-alpha.28", "", { "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-BqH5n9sYD7ArB4uYWwNvQZh1JcQbdz5M9+Baxzxa05h1c55b7rAPAW66e3WSRRuna/07qla7e1qXbNIVMU2EFQ=="],
 
     "rr7-todo-app/@prisma/client": ["@prisma/client@6.14.0", "", { "peerDependencies": { "prisma": "*", "typescript": ">=5.1.0" }, "optionalPeers": ["prisma", "typescript"] }, "sha512-8E/Nk3eL5g7RQIg/LUj1ICyDmhD053STjxrPxUtCRybs2s/2sOEcx9NpITuAOPn07HEpWBfhAVe1T/HYWXUPOw=="],
 
@@ -1612,15 +1612,13 @@
 
     "read-pkg/normalize-package-data/hosted-git-info": ["hosted-git-info@7.0.2", "", { "dependencies": { "lru-cache": "^10.0.1" } }, "sha512-puUZAUKT5m8Zzvs72XWy3HtvVbTWljRE66cP60bxJzAqf2DgICo7lYTY2IHUmLnNpjYvw5bvmoHvPc0QO2a62w=="],
 
-    "rr7-todo-app/@cobalt27/auth/@cobalt27/runtime": ["@cobalt27/runtime@workspace:packages/runtime"],
-
     "rr7-todo-app/@cobalt27/auth/@prisma/client": ["@prisma/client@6.13.0", "", { "peerDependencies": { "prisma": "*", "typescript": ">=5.1.0" }, "optionalPeers": ["prisma", "typescript"] }, "sha512-8m2+I3dQovkV8CkDMluiwEV1TxV9EXdT6xaCz39O6jYw7mkf5gwfmi+cL4LJsEPwz5tG7sreBwkRpEMJedGYUQ=="],
 
     "rr7-todo-app/@cobalt27/auth/prisma": ["prisma@6.13.0", "", { "dependencies": { "@prisma/config": "6.13.0", "@prisma/engines": "6.13.0" }, "peerDependencies": { "typescript": ">=5.1.0" }, "optionalPeers": ["typescript"], "bin": { "prisma": "build/index.js" } }, "sha512-dfzORf0AbcEyyzxuv2lEwG8g+WRGF/qDQTpHf/6JoHsyF5MyzCEZwClVaEmw3WXcobgadosOboKUgQU0kFs9kw=="],
 
     "rr7-todo-app/@cobalt27/auth/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
 
-    "rr7-todo-app/@cobalt27/dev/@cobalt27/runtime": ["@cobalt27/runtime@workspace:packages/runtime"],
+    "rr7-todo-app/@cobalt27/dev/@cobalt27/generate": ["@cobalt27/generate@0.5.0-alpha.28", "", { "dependencies": { "@cobalt27/runtime": "0.5.0-alpha.28" }, "peerDependencies": { "typescript": "~5.7.3" } }, "sha512-b3JPndAZ4kKk9qO6ePDAOgFao/WKgtTN0BC31ghfZX44xPZpHJlNyxI0sBeK9RwqV7Kai78nnyd4s1imjfXvKQ=="],
 
     "rr7-todo-app/@cobalt27/dev/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
 
@@ -1643,10 +1641,6 @@
     "langium/vscode-languageserver/vscode-languageserver-protocol/vscode-languageserver-types": ["vscode-languageserver-types@3.17.2", "", {}, "sha512-zHhCWatviizPIq9B7Vh9uvrH6x3sK8itC84HkamnBWoDFJtzBf7SWlpLCZUit72b3os45h6RWQNC9xHRDF8dRA=="],
 
     "read-pkg/normalize-package-data/hosted-git-info/lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
-
-    "rr7-todo-app/@cobalt27/auth/@cobalt27/runtime/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
-
-    "rr7-todo-app/@cobalt27/dev/@cobalt27/runtime/@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
 
     "rr7-todo-app/prisma/@prisma/engines/@prisma/engines-version": ["@prisma/engines-version@6.14.0-25.717184b7b35ea05dfa71a3236b7af656013e1e49", "", {}, "sha512-EgN9ODJpiX45yvwcngoStp3uQPJ3l+AEVoQ6dMMO2QvmwIlnxfApzKmJQExzdo7/hqQANrz5txHJdGYHzOnGHA=="],
   }
