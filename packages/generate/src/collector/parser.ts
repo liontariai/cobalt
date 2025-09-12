@@ -81,7 +81,7 @@ export function parseTypeString(
             }
 
             // Parse property name
-            const propMatch = typeString
+            let propMatch = typeString
                 .slice(index)
                 .match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\??\s*:/);
             if (!propMatch) {
@@ -94,6 +94,30 @@ export function parseTypeString(
                     // We're at the end of the object
                     break;
                 }
+
+                if (nextChar === "[") {
+                    let computedPropName = "";
+                    let lvl = 1;
+                    let idx = index;
+                    let nextNextChar = nextChar;
+                    while (nextNextChar !== "]" && lvl !== 0) {
+                        nextNextChar = typeString[++idx];
+                        computedPropName += nextNextChar;
+
+                        if (nextNextChar === "]") {
+                            lvl--;
+                        } else if (nextNextChar === "[") {
+                            lvl++;
+                        }
+                    }
+                    index = idx;
+                    propMatch = computedPropName.match(
+                        /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\??\s*(:|in)/,
+                    );
+                }
+
+                if (propMatch) break;
+
                 throw new Error(
                     `Invalid property name at index ${index}: ${typeString.slice(
                         index,
