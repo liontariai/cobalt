@@ -902,7 +902,7 @@ export const gatherMetaForType = (
         });
 
         if (hasUndefinedOrNullUnion) {
-            tsType = _tsType.types[0].getNonNullableType();
+            tsType = _tsType.getNonNullableType();
         }
     }
 
