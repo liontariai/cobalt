@@ -1,7 +1,7 @@
 import type {
-    TypeMeta,
-    SchemaMeta,
     OperationMeta,
+    SchemaMeta,
+    TypeMeta,
 } from "../../collector/types";
 
 export class GeneratorSchemaGQL {
@@ -45,9 +45,7 @@ export class GeneratorSchemaGQL {
         const enums: string[] = [];
         for (const typeMeta of this.schemaMeta.types) {
             if (typeMeta.isEnum) {
-                let name = typeMeta.name.endsWith("!")
-                    ? typeMeta.name.slice(0, -1)
-                    : typeMeta.name;
+                let name = typeMeta.name;
 
                 name = name.replaceAll("[", "").replaceAll("]", "");
                 name = name.replaceAll("!", "");
@@ -86,7 +84,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
 
         let name = typeMeta.name;
         name = typeMeta.isList
-            ? name.slice(typeMeta.isList, -typeMeta.isList)
+            ? name.replaceAll("[", "").replaceAll("]", "")
             : name;
 
         const typedef = `@typedef {${typeMeta.scalarTSType}} ${name}`;
@@ -97,7 +95,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
     private typeMetaNameToTsType(typeMeta: TypeMeta): string {
         const name = typeMeta.isScalar
             ? typeMeta.isList
-                ? `${typeMeta.name.slice(typeMeta.isList, -typeMeta.isList)}`
+                ? `${typeMeta.name.replaceAll("[", "").replaceAll("]", "")}`
                 : typeMeta.name
             : typeMeta.scalarTSType!;
 
@@ -107,7 +105,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
     }
     private typeMetaNameToGqlTypeName(typeMeta: TypeMeta): string {
         let name = typeMeta.isList
-            ? `${typeMeta.name.slice(typeMeta.isList, -typeMeta.isList)}`
+            ? `${typeMeta.name.replaceAll("[", "").replaceAll("]", "")}`
             : typeMeta.name;
 
         name = this.ScalarTypeMap.get(name.replaceAll("!", "")) ?? name;
@@ -127,10 +125,9 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         for (const typeMeta of this.schemaMeta.types) {
             if (typeMeta.isInput && !typeMeta.isUnion) {
                 let name = typeMeta.name;
-                name = typeMeta.isList
-                    ? name.slice(typeMeta.isList, -typeMeta.isList)
-                    : name;
-                name = name.endsWith("!") ? name.slice(0, -1) : name;
+                // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
+                name = name.replaceAll("[", "").replaceAll("]", "");
+                name = name.replaceAll("!", "");
 
                 const fieldDefs: string[] = [];
                 for (const field of typeMeta.inputFields) {
@@ -157,10 +154,9 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         for (const typeMeta of this.schemaMeta.types) {
             if (typeMeta.isObject) {
                 let name = typeMeta.name;
-                name = typeMeta.isList
-                    ? name.slice(typeMeta.isList, -typeMeta.isList)
-                    : name;
-                name = name.endsWith("!") ? name.slice(0, -1) : name;
+                // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
+                name = name.replaceAll("[", "").replaceAll("]", "");
+                name = name.replaceAll("!", "");
 
                 if (typeMeta.fields.length === 0) {
                     console.warn(
@@ -205,10 +201,9 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
     ): string {
         let typeName = typeMeta.name;
 
-        typeName = typeName.endsWith("!") ? typeName.slice(0, -1) : typeName;
-        typeName = typeMeta.isList
-            ? typeName.slice(typeMeta.isList, -typeMeta.isList)
-            : typeName;
+        typeName = typeName.replaceAll("!", "");
+        // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
+        typeName = typeName.replaceAll("[", "").replaceAll("]", "");
 
         return `
         """
@@ -223,7 +218,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
     public makeUnionTypes(): string {
         const unions: string[] = [];
         for (const typeMeta of this.schemaMeta.types) {
-            if (typeMeta.isUnion) {
+            if (typeMeta.isUnion && typeMeta.possibleTypes.length) {
                 if (
                     typeMeta.isInput ||
                     typeMeta.possibleTypes.some((t) => t.isScalar || t.isEnum)
@@ -238,13 +233,9 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                 } else {
                     let name = typeMeta.name;
 
-                    name = name.endsWith("!") ? name.slice(0, -1) : name;
-                    name = typeMeta.isList
-                        ? name.slice(typeMeta.isList, -typeMeta.isList)
-                        : name;
-
+                    name = name.replaceAll("!", "");
                     // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
-                    name = name.replaceAll("[", "_").replaceAll("]", "_");
+                    name = name.replaceAll("[", "").replaceAll("]", "");
 
                     unions.push(
                         `${typeMeta.description ? `"""\n${typeMeta.description}\n"""` : ""}
@@ -255,10 +246,9 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                                         type.name.replaceAll("!", ""),
                                     ) ?? type.name.replaceAll("!", "");
 
-                                n = n.endsWith("!") ? n.slice(0, -1) : n;
-                                n = typeMeta.isList
-                                    ? n.slice(typeMeta.isList, -typeMeta.isList)
-                                    : n;
+                                n = n.replaceAll("!", "");
+                                // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
+                                n = n.replaceAll("[", "").replaceAll("]", "");
 
                                 return n;
                             })
