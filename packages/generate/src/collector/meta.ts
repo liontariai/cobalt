@@ -890,7 +890,7 @@ export const gatherMetaForType = (
             ?.valueDeclaration;
     let overrideIsNonNull = tsTypeAndSymbol.overrideIsNonNull ?? undefined;
     if (_tsType.isUnion()) {
-        _tsType.types = _tsType.types.filter((t, i, arr) => {
+        const hasUndefinedOrNullUnion = _tsType.types.some((t, i, arr) => {
             const isNullOrUndefined =
                 (t.flags & ts.TypeFlags.Null) !== 0 ||
                 (t.flags & ts.TypeFlags.Undefined) !== 0;
@@ -901,8 +901,8 @@ export const gatherMetaForType = (
             return true;
         });
 
-        if (_tsType.types.length === 1) {
-            tsType = _tsType.types[0];
+        if (hasUndefinedOrNullUnion) {
+            tsType = _tsType.types[0].getNonNullableType();
         }
     }
 
