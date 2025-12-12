@@ -50,7 +50,7 @@
     },
     "packages/auth": {
       "name": "@cobalt27/auth",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "dependencies": {
         "@aws-sdk/client-sesv2": "^3.758.0",
         "@cobalt27/runtime": "workspace:*",
@@ -83,7 +83,7 @@
     },
     "packages/dev": {
       "name": "@cobalt27/dev",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "bin": {
         "cobalt": "dist/esm/index.js",
       },
@@ -108,7 +108,7 @@
     },
     "packages/generate": {
       "name": "@cobalt27/generate",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "dependencies": {
         "@cobalt27/runtime": "workspace:*",
       },
@@ -122,7 +122,7 @@
     },
     "packages/runtime": {
       "name": "@cobalt27/runtime",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "devDependencies": {
         "@types/bun": "latest",
         "prettier": "latest",
