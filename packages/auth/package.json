@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/auth",
-    "version": "0.5.5",
+    "version": "0.5.6",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "type": "module",
@@ -39,7 +39,7 @@
     },
     "devDependencies": {
         "@cobalt27/dev": "workspace:*",
-        "@samarium.sdk/new": "^0.25.1",
+        "@samarium.sdk/new": "^0.25.2",
         "@types/aws-lambda": "8.10.147",
         "@types/bun": "latest",
         "@types/node": "latest",
@@ -57,7 +57,7 @@
         "@electric-sql/pglite": "^0.3.7",
         "@openauthjs/openauth": "^0.4.3",
         "@prisma/client": "~6.13.0",
-        "@samarium.sdk/make": "^0.25.1",
+        "@samarium.sdk/make": "^0.25.2",
         "@zenstackhq/runtime": "~2.18.0",
         "@zenstackhq/sdk": "~2.18.0",
         "cookie": "^1.0.2",
