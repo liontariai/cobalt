@@ -30,6 +30,7 @@ import {
 
 const camelCase = (parts: string[]) => {
     return parts
+        .flatMap((part) => part.split("-"))
         .map((part, index) =>
             index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
         )
