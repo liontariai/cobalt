@@ -67,6 +67,8 @@ export const initializeAndCompile = async (
         pretty: boolean;
         sdkOut: string;
         port: number;
+        operationFilesGlob?: string;
+        typeFilesGlob?: string;
     },
     initCobaltAuthFn?: (authConfigFile: string) => Promise<void>,
     silent: boolean = false,
@@ -122,8 +124,13 @@ export const initializeAndCompile = async (
     const t1 = performance.now();
     const generator = new Generator();
 
-    let { schema, entrypoint, tsTypes } =
-        await generator.generate(operationsDir);
+    let { schema, entrypoint, tsTypes } = await generator.generate(
+        operationsDir,
+        {
+            operationFilesGlob: options.operationFilesGlob,
+            typeFilesGlob: options.typeFilesGlob,
+        },
+    );
 
     const t2 = performance.now();
     if (!silent) {
