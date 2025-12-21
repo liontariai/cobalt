@@ -1,0 +1,15 @@
+{
+    "name": "cobalt-e2e",
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {},
+    "dependencies": {
+        "@cobalt27/auth": "workspace:*",
+        "@cobalt27/dev": "workspace:*",
+        "@cobalt27/runtime": "workspace:*"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "printWidth": 150
+    }
+}
