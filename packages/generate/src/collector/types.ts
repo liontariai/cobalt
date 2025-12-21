@@ -1,4 +1,7 @@
-export type CodegenOptions = {};
+export type CodegenOptions = {
+    operationFilesGlob?: string;
+    typeFilesGlob?: string;
+};
 
 export interface SchemaMeta {
     types: TypeMeta[];
