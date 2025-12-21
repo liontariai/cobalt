@@ -93,11 +93,27 @@ export const initializeAndCompile = async (
         process.exit(1);
     }
 
-    const ctxFile = resolve(path.join(operationsDir, "..", "ctx.ts"));
+    let ctxFile = resolve(path.join(operationsDir, "..", "ctx.ts"));
+    let ctxDir: string = path.join(operationsDir, "..");
+    const searchCtxDirs = [];
+    let tries = 0;
+    if (!ctxFile) {
+        do {
+            console.log(
+                `Looking for ctx.ts in: ${path.join(ctxDir, "ctx.ts")}`,
+            );
+            tries++;
+            ctxDir = path.resolve(ctxDir, "..");
+            searchCtxDirs.push(ctxDir);
+            ctxFile = resolve(path.join(ctxDir, "ctx.ts"));
+            if (ctxFile) break;
+        } while (tries < 10);
+    }
+
     if (!ctxFile) {
         console.error(`The ctx.ts file is mandatory!`);
         console.error(
-            `Must be in: ${path.join(operationsDir, "..", "ctx.ts")}`,
+            `Must be in: ${path.join(operationsDir, "..", "ctx.ts")} or in one of the parent directories: \n${searchCtxDirs.join("\n\t")}`,
             `You can create a ctx.ts file by running:`,
             `bunx @cobalt27/dev init`,
         );
