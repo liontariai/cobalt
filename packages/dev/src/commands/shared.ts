@@ -72,6 +72,18 @@ export const initializeAndCompile = async (
     },
     initCobaltAuthFn?: (authConfigFile: string) => Promise<void>,
     silent: boolean = false,
+    overrideWriteOuts?: {
+        writeSchemaOut?: (outpath: string, schema: string) => Promise<string>;
+        writeTypesOut?: (
+            outpath: string,
+            tsTypes: Record<string, string>,
+        ) => Promise<string>;
+        writeSdkOut?: (outpath: string, sdk: string) => Promise<string>;
+        writeResolversOut?: (
+            outpath: string,
+            entrypoint: string,
+        ) => Promise<string>;
+    },
 ) => {
     const searchDirs = [
         options.dir || "operations",
@@ -161,17 +173,28 @@ export const initializeAndCompile = async (
         }
     }
 
-    const writeSchemaOut = async () => {
-        await Bun.write(
-            Bun.file(resolve("./.cobalt/schema.graphql", false)!),
-            schema,
-        );
+    let schemaOutpath = resolve("./.cobalt/schema.graphql", false)!;
+    let writeSchemaOut = async () => {
+        await Bun.write(Bun.file(schemaOutpath), schema);
+        return schemaOutpath;
     };
+    if (overrideWriteOuts?.writeSchemaOut) {
+        writeSchemaOut = async () => {
+            await overrideWriteOuts.writeSchemaOut!(schemaOutpath, schema);
+            return schemaOutpath;
+        };
+    }
 
-    const resolversPath = resolve("./.cobalt/resolvers.ts", false)!;
-    // const writeResolversOut = async () => {
-    await Bun.write(Bun.file(resolversPath), entrypoint);
-    // };
+    let resolversPath = resolve("./.cobalt/resolvers.ts", false)!;
+    if (overrideWriteOuts?.writeResolversOut) {
+        resolversPath =
+            (await overrideWriteOuts.writeResolversOut(
+                resolversPath,
+                entrypoint,
+            )) ?? resolversPath;
+    } else {
+        await Bun.write(Bun.file(resolversPath), entrypoint);
+    }
 
     const writeTypesOut = async () => {
         for (const [fname, fcontent] of Object.entries(tsTypes)) {
@@ -220,9 +243,15 @@ export const initializeAndCompile = async (
             .replaceAll("[AUTH_HEADER_NAME]", "Authorization")
             .replaceAll("[ENDPOINT]", `http://localhost:${port}/graphql`);
 
-        const writeSdkOut = async () => {
+        let writeSdkOut = async () => {
             await Bun.write(Bun.file(sdkout), sdkContent);
+            return sdkout;
         };
+        if (overrideWriteOuts?.writeSdkOut) {
+            writeSdkOut = async () => {
+                return await overrideWriteOuts.writeSdkOut!(sdkout, sdkContent);
+            };
+        }
 
         return {
             operationsDir,
@@ -238,7 +267,7 @@ export const initializeAndCompile = async (
             writeSdkOut,
         };
     } catch (e) {
-        console.error("Failed to generate schema, skipping");
+        console.error("Failed to generate schema, skipping", e);
         fs.writeFileSync(resolve("./.cobalt/schema.graphql", false)!, schema);
         console.error(
             `Written INVALID schema to ./.cobalt/schema.graphql, skipping sdk generation`,
