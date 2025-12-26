@@ -30,6 +30,7 @@ import {
 
 const camelCase = (parts: string[]) => {
     return parts
+        .flatMap((part) => part.split("-"))
         .map((part, index) =>
             index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
         )
@@ -127,13 +128,33 @@ export const gatherMeta = (
     const serverDir = path.resolve(operationsDir, "..");
     const typesDir = path.join(serverDir, "types");
 
+    if (
+        options.operationFilesGlob &&
+        !options.operationFilesGlob.endsWith("*.ts")
+    ) {
+        console.error(
+            `operationFilesGlob must end with *.ts, got: ${options.operationFilesGlob}`,
+        );
+        process.exit(1);
+    }
+    if (options.typeFilesGlob && !options.typeFilesGlob.endsWith("*.ts")) {
+        console.error(
+            `typeFilesGlob must end with *.ts, got: ${options.typeFilesGlob}`,
+        );
+        process.exit(1);
+    }
+
     const files = [
-        ...new Glob(`${operationsDir}/**/*.ts`).scanSync(),
+        ...new Glob(
+            `${operationsDir}/${options.operationFilesGlob ?? "**/*.ts"}`,
+        ).scanSync(),
 
         // the order is important, to have all types in the collector already
         // and only extend them with additional field definitions
         ...(fs.existsSync(typesDir)
-            ? new Glob(`${typesDir}/**/*.ts`).scanSync()
+            ? new Glob(
+                  `${typesDir}/${options.typeFilesGlob ?? "**/*.ts"}`,
+              ).scanSync()
             : []),
     ].filter(Boolean) as string[];
 

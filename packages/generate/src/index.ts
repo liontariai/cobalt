@@ -2,7 +2,7 @@ import path from "path";
 
 import { Collector, gatherMeta } from "./collector";
 import { GeneratorSchemaGQL } from "./schema/graphql";
-import type { SchemaMeta } from "./collector/types";
+import type { CodegenOptions, SchemaMeta } from "./collector/types";
 
 export class Generator {
     constructor() {}
@@ -52,12 +52,12 @@ export class Generator {
         return typesFiles;
     }
 
-    public async generate(operationsDir: string) {
+    public async generate(operationsDir: string, options: CodegenOptions) {
         const serverDir = path.resolve(operationsDir, "..");
         const typesDir = path.join(serverDir, "types");
 
         const collector = new Collector();
-        const schemaMeta = gatherMeta(operationsDir, {}, collector);
+        const schemaMeta = gatherMeta(operationsDir, options, collector);
 
         const typesFiles = this.generateTSTypesFile(schemaMeta);
         const schema = new GeneratorSchemaGQL(schemaMeta).generateSchema();
