@@ -199,6 +199,9 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         typeMeta: TypeMeta,
         description: string,
     ): string {
+        const typedef = this.getOrMakeTypedef(typeMeta);
+        if (!typedef.length) return "";
+
         let typeName = typeMeta.name;
 
         typeName = typeName.replaceAll("!", "");
@@ -208,7 +211,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         return `
         """
         ${description}
-        ${this.getOrMakeTypedef(typeMeta)}
+        ${typedef}
         @type {${typeName}}
         """
         scalar ${typeName}
@@ -257,7 +260,10 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                 }
             }
         }
-        return unions.filter((v, i, arr) => i === arr.indexOf(v)).join("\n");
+        return unions
+            .filter(Boolean)
+            .filter((v, i, arr) => i === arr.indexOf(v))
+            .join("\n");
     }
 
     public makeOperationTypes(): string {
