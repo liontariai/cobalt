@@ -78,6 +78,7 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
     await writeSchemaOut();
 
     const configureSdkWithHandler = async (sdk: any) => {
+        if (!sdk?.init) return sdk;
         sdk.init({
             fetcher: async (init: string | URL | Request, options?: RequestInit) => {
                 if (!new Headers(options?.headers)?.get("accept")?.includes("text/event-stream")) {
