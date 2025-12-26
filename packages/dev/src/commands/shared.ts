@@ -268,7 +268,7 @@ export const initializeAndCompile = async (
         };
     } catch (e) {
         console.error("Failed to generate schema, skipping", e);
-        fs.writeFileSync(resolve("./.cobalt/schema.graphql", false)!, schema);
+        await writeSchemaOut();
         console.error(
             `Written INVALID schema to ./.cobalt/schema.graphql, skipping sdk generation`,
         );
