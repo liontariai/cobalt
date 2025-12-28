@@ -822,47 +822,181 @@ describe("E2E", () => {
         });
     });
 
-    describe("Subscription root fields", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.subscriptions.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/subscriptions", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Subscriptions", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.subscriptions.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/subscriptions", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const results: string[] = [];
-            for await (const value of await sdk.subscription.rootString) {
-                results.push(value);
-            }
+                const results: string[] = [];
+                for await (const value of await sdk.subscription.rootString) {
+                    results.push(value);
+                }
 
-            expect(results).toEqual(["Hello", "World"]);
+                expect(results).toEqual(["Hello", "World"]);
+            });
+
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.subscriptions.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/subscriptions", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const results: string[] = [];
+                for await (const value of await sdk.subscription.rootWithArgsString({ message: "Hello" })) {
+                    results.push(value);
+                }
+
+                expect(results).toEqual(["Hello", "Hello"]);
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.subscriptions.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/subscriptions", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const iterable = sdk.subscription.rootString.$lazy;
+
+                    const results: string[] = [];
+                    for await (const value of await iterable()) {
+                        results.push(value);
+                    }
+
+                    expect(results).toEqual(["Hello", "World"]);
+                });
+
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.subscriptions.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/subscriptions", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const iterable = sdk.subscription.rootWithArgsString({ message: _ }).$lazy;
+
+                    const results: string[] = [];
+                    for await (const value of await iterable({ message: "Hello" })) {
+                        results.push(value);
+                    }
+
+                    expect(results).toEqual(["Hello", "Hello"]);
+                });
+            });
         });
-    });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/subscriptions", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-    describe("Subscription fields in objects", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/subscriptions", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const results: Array<{ message: string }> = [];
+                for await (const value of await sdk.subscription.inObjString()) {
+                    results.push(value);
+                }
 
-            const results: Array<{ message: string }> = [];
-            for await (const value of await sdk.subscription.inObjString()) {
-                results.push(value);
-            }
+                expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+            });
 
-            expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/subscriptions", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+                const sdk = _sdk;
+
+                const results: Array<{ message: string }> = [];
+                for await (const value of await sdk.subscription.inObjWithArgsString({ message: "Hello" })()) {
+                    results.push(value);
+                }
+
+                expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/subscriptions", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const iterable = sdk.subscription.inObjString().$lazy;
+
+                    const results: Array<{ message: string }> = [];
+                    for await (const value of await iterable()) {
+                        results.push(value);
+                    }
+
+                    expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+                });
+
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.subscriptions.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/subscriptions", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const iterable = sdk.subscription.inObjWithArgsString({ message: _ })().$lazy;
+
+                    const results: Array<{ message: string }> = [];
+                    for await (const value of await iterable({ message: "Hello" })) {
+                        results.push(value);
+                    }
+
+                    expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+                });
+            });
         });
     });
 
