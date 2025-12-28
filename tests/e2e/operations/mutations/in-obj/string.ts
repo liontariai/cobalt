@@ -1,6 +1,5 @@
-export function Mutation(arg: string) {
+export function Mutation() {
     return {
-        result: arg,
+        result: "Hello, World!",
     };
 }
-
