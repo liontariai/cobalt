@@ -1,6 +1,6 @@
-export function Query(arg: string) {
+export function Query() {
     return {
-        scalar: arg,
+        scalar: "Hello, World!",
         list: [1, 2, 3],
         nested: {
             value: "nested",
@@ -8,4 +8,3 @@ export function Query(arg: string) {
         },
     };
 }
-
