@@ -1,4 +1,3 @@
 export function Query() {
-    return "RED";
+    return "RED" as const;
 }
-

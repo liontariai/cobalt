@@ -628,81 +628,155 @@ describe("E2E", () => {
         });
     });
 
-    describe("Query enum root fields", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.enums.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/enums", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Enums", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.enums.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/enums", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const simple = await sdk.query.rootSimple;
+                const simple = await sdk.query.rootSimple;
 
-            expect(simple).toBe("RED");
+                expect(simple).toBe("RED");
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.enums.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/enums", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const red = await sdk.query.rootWithArgsSimple({ arg: "RED" });
+                const green = await sdk.query.rootWithArgsSimple({ arg: "GREEN" });
+                const blue = await sdk.query.rootWithArgsSimple({ arg: "BLUE" });
+
+                expect(red).toBe("RED");
+                expect(green).toBe("GREEN");
+                expect(blue).toBe("BLUE");
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.enums.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/enums", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const simple = sdk.query.rootSimple.$lazy;
+
+                    expect(await simple()).toBe("RED");
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.enums.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/enums", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const simple = sdk.query.rootWithArgsSimple({ arg: _ }).$lazy;
+
+                    expect(await simple({ arg: "RED" })).toBe("RED");
+                    expect(await simple({ arg: "GREEN" })).toBe("GREEN");
+                    expect(await simple({ arg: "BLUE" })).toBe("BLUE");
+                });
+            });
         });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.enums.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/enums", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.enums.root.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/enums", {
-                    operationFilesGlob: "root/with-args/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const simple = await sdk.query.inObjSimple();
 
-            const red = await sdk.query.rootWithArgsSimple({ arg: "RED" });
-            const green = await sdk.query.rootWithArgsSimple({ arg: "GREEN" });
-            const blue = await sdk.query.rootWithArgsSimple({ arg: "BLUE" });
+                expect(simple.color).toBe("RED");
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.enums.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/enums", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            expect(red).toBe("RED");
-            expect(green).toBe("GREEN");
-            expect(blue).toBe("BLUE");
-        });
-    });
+                const sdk = _sdk;
 
-    describe("Query enum fields in objects", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.enums.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/enums", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const red = await sdk.query.inObjWithArgsSimple({ arg: "RED" })();
+                const green = await sdk.query.inObjWithArgsSimple({ arg: "GREEN" })();
 
-            const sdk = _sdk;
+                expect(red.color).toBe("RED");
+                expect(green.color).toBe("GREEN");
+            });
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.enums.in-obj").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/enums", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            const simple = await sdk.query.inObjSimple();
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
 
-            expect(simple.color).toBe("RED");
-        });
+                    const simple = sdk.query.inObjSimple().$lazy;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.enums.in-obj.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/enums", {
-                    operationFilesGlob: "in-obj/with-args/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                    expect((await simple()).color).toBe("RED");
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.enums.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/enums", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            const sdk = _sdk;
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
 
-            const red = await sdk.query.inObjWithArgsSimple({ arg: "RED" })();
-            const green = await sdk.query.inObjWithArgsSimple({ arg: "GREEN" })();
+                    const simple = sdk.query.inObjWithArgsSimple({ arg: _ })().$lazy;
 
-            expect(red.color).toBe("RED");
-            expect(green.color).toBe("GREEN");
+                    expect((await simple({ arg: "RED" })).color).toBe("RED");
+                    expect((await simple({ arg: "GREEN" })).color).toBe("GREEN");
+                });
+            });
         });
     });
 
