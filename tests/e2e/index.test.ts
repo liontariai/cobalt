@@ -866,87 +866,174 @@ describe("E2E", () => {
         });
     });
 
-    describe("Query nested object root fields", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.nested.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/nested", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Nested", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.nested.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/nested", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const simple = await sdk.query.rootSimple();
+                const simple = await sdk.query.rootSimple();
 
-            expect(simple.user.name).toBe("John");
-            expect(simple.user.address.street).toBe("123 Main St");
-            expect(simple.user.address.city).toBe("New York");
+                expect(simple.user.name).toBe("John");
+                expect(simple.user.address.street).toBe("123 Main St");
+                expect(simple.user.address.city).toBe("New York");
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.nested.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/nested", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const result = await sdk.query.rootWithArgsSimple({
+                    arg: "Jane",
+                })();
+
+                expect(result.user.name).toBe("Jane");
+                expect(result.user.address.street).toBe("123 Main St");
+                expect(result.user.address.city).toBe("New York");
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.nested.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/nested", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const simple = sdk.query.rootSimple().$lazy;
+
+                    const result = await simple();
+                    expect(result.user.name).toBe("John");
+                    expect(result.user.address.street).toBe("123 Main St");
+                    expect(result.user.address.city).toBe("New York");
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.nested.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/nested", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const simple = sdk.query.rootWithArgsSimple({
+                        arg: _,
+                    })().$lazy;
+
+                    const result = await simple({ arg: "Jane" });
+                    expect(result.user.name).toBe("Jane");
+                    expect(result.user.address.street).toBe("123 Main St");
+                    expect(result.user.address.city).toBe("New York");
+                });
+            });
         });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.nested.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/nested", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.nested.root.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/nested", {
-                    operationFilesGlob: "root/with-args/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const simple = await sdk.query.inObjSimple();
 
-            const result = await sdk.query.rootWithArgsSimple({
-                arg: "Jane",
-            })();
+                expect(simple.data.user.name).toBe("John");
+                expect(simple.data.user.address.street).toBe("123 Main St");
+                expect(simple.data.user.address.city).toBe("New York");
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.nested.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/nested", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            expect(result.user.name).toBe("Jane");
-            expect(result.user.address.street).toBe("123 Main St");
-            expect(result.user.address.city).toBe("New York");
-        });
-    });
+                const sdk = _sdk;
 
-    describe("Query nested object fields in objects", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.nested.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/nested", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const result = await sdk.query.inObjWithArgsSimple({
+                    arg: "Jane",
+                })();
 
-            const sdk = _sdk;
+                expect(result.data.user.name).toBe("Jane");
+                expect(result.data.user.address.street).toBe("123 Main St");
+                expect(result.data.user.address.city).toBe("New York");
+            });
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.nested.in-obj").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/nested", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            const simple = await sdk.query.inObjSimple();
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
 
-            expect(simple.data.user.name).toBe("John");
-            expect(simple.data.user.address.street).toBe("123 Main St");
-            expect(simple.data.user.address.city).toBe("New York");
-        });
+                    const simple = sdk.query.inObjSimple().$lazy;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.nested.in-obj.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/nested", {
-                    operationFilesGlob: "in-obj/with-args/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                    const result = await simple();
+                    expect(result.data.user.name).toBe("John");
+                    expect(result.data.user.address.street).toBe("123 Main St");
+                    expect(result.data.user.address.city).toBe("New York");
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.nested.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/nested", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            const sdk = _sdk;
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
 
-            const result = await sdk.query.inObjWithArgsSimple({
-                arg: "Jane",
-            })();
+                    const simple = sdk.query.inObjWithArgsSimple({
+                        arg: _,
+                    })().$lazy;
 
-            expect(result.data.user.name).toBe("Jane");
-            expect(result.data.user.address.street).toBe("123 Main St");
-            expect(result.data.user.address.city).toBe("New York");
+                    const result = await simple({ arg: "Jane" });
+                    expect(result.data.user.name).toBe("Jane");
+                    expect(result.data.user.address.street).toBe("123 Main St");
+                    expect(result.data.user.address.city).toBe("New York");
+                });
+            });
         });
     });
 
