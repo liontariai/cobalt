@@ -1037,42 +1037,83 @@ describe("E2E", () => {
         });
     });
 
-    describe("Query nullable root fields", () => {
-        test("Null field", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.nullable.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/nullable", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Nullable", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.nullable.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/nullable", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const optional = await sdk.query.rootOptional;
+                const optional = await sdk.query.rootOptional;
 
-            expect(optional).toBeNull();
+                expect(optional).toBeNull();
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.nullable.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/nullable", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const optional = sdk.query.rootOptional.$lazy;
+
+                    expect(await optional()).toBeNull();
+                });
+            });
         });
-    });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.nullable.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/nullable", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-    describe("Query nullable fields in objects", () => {
-        test("Null field", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.nullable.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/nullable", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const optional = await sdk.query.inObjOptional();
 
-            const optional = await sdk.query.inObjOptional();
+                expect(optional.optionalField).toBeNull();
+                expect(optional.requiredField).toBe("required");
+            });
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.nullable.in-obj").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/nullable", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            expect(optional.optionalField).toBeNull();
-            expect(optional.requiredField).toBe("required");
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const optional = sdk.query.inObjOptional().$lazy;
+
+                    const result = await optional();
+                    expect(result.optionalField).toBeNull();
+                    expect(result.requiredField).toBe("required");
+                });
+            });
         });
     });
 
