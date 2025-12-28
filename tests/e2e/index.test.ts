@@ -479,79 +479,152 @@ describe("E2E", () => {
         });
     });
 
-    describe("Query union root fields", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.unions.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/unions", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Unions", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.unions.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/unions", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const simple = await sdk.query.rootSimple;
+                const simple = await sdk.query.rootSimple;
 
-            expect(simple).toBe("Hello, World!");
+                expect(simple).toBe("Hello, World!");
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.unions.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/unions", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const stringResult = await sdk.query.rootWithArgsSimple({ arg: "Hello" });
+                const numberResult = await sdk.query.rootWithArgsSimple({ arg: 42 });
+
+                expect(stringResult).toBe("Hello");
+                expect(numberResult).toBe(42);
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.unions.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/unions", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const simple = sdk.query.rootSimple.$lazy;
+
+                    expect(await simple()).toBe("Hello, World!");
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.unions.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/unions", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const simple = sdk.query.rootWithArgsSimple({ arg: _ }).$lazy;
+
+                    expect(await simple({ arg: "Hello" })).toBe("Hello");
+                    expect(await simple({ arg: 42 })).toBe(42);
+                });
+            });
         });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.unions.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/unions", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.unions.root.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/unions", {
-                    operationFilesGlob: "root/with-args/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const simple = await sdk.query.inObjSimple();
 
-            const stringResult = await sdk.query.rootWithArgsSimple({ arg: "Hello" });
-            const numberResult = await sdk.query.rootWithArgsSimple({ arg: 42 });
+                expect(simple.value).toBe("Hello, World!");
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.unions.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/unions", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            expect(stringResult).toBe("Hello");
-            expect(numberResult).toBe(42);
-        });
-    });
+                const sdk = _sdk;
 
-    describe("Query union fields in objects", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.unions.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/unions", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const stringResult = await sdk.query.inObjWithArgsSimple({ arg: "Hello" })();
+                const numberResult = await sdk.query.inObjWithArgsSimple({ arg: 42 })();
 
-            const sdk = _sdk;
+                expect(stringResult.value).toBe("Hello");
+                expect(numberResult.value).toBe(42);
+            });
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.unions.in-obj").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/unions", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            const simple = await sdk.query.inObjSimple();
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
 
-            expect(simple.value).toBe("Hello, World!");
-        });
+                    const simple = sdk.query.inObjSimple().$lazy;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.unions.in-obj.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/unions", {
-                    operationFilesGlob: "in-obj/with-args/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                    expect((await simple()).value).toBe("Hello, World!");
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.unions.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/unions", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            const sdk = _sdk;
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
 
-            const stringResult = await sdk.query.inObjWithArgsSimple({ arg: "Hello" })();
-            const numberResult = await sdk.query.inObjWithArgsSimple({ arg: 42 })();
+                    const simple = sdk.query.inObjWithArgsSimple({ arg: _ })().$lazy;
 
-            expect(stringResult.value).toBe("Hello");
-            expect(numberResult.value).toBe(42);
+                    expect((await simple({ arg: "Hello" })).value).toBe("Hello");
+                    expect((await simple({ arg: 42 })).value).toBe(42);
+                });
+            });
         });
     });
 
@@ -804,7 +877,7 @@ describe("E2E", () => {
     });
 
     describe("Query nullable root fields", () => {
-        test("Optional field", async () => {
+        test("Null field", async () => {
             const _sdk = (await import("./operations/.sdks/operations.nullable.root").catch(console.error))?.default;
             (
                 await makeHandlerFromDir("./operations/nullable", {
@@ -818,12 +891,12 @@ describe("E2E", () => {
 
             const optional = await sdk.query.rootOptional;
 
-            expect(optional).toBeUndefined();
+            expect(optional).toBeNull();
         });
     });
 
     describe("Query nullable fields in objects", () => {
-        test("Optional field", async () => {
+        test("Null field", async () => {
             const _sdk = (await import("./operations/.sdks/operations.nullable.in-obj").catch(console.error))?.default;
             (
                 await makeHandlerFromDir("./operations/nullable", {
