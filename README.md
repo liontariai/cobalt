@@ -12,6 +12,13 @@
 </strong>
 </h2>
 <br />
+<br />
+
+[![GitHub last commit](https://img.shields.io/github/last-commit/liontariai/cobalt)](https://github.com/liontariai/cobalt/commits/main/)
+[![NPM Version](https://img.shields.io/npm/v/%40cobalt27%2Fdev)](https://www.npmjs.com/package/@cobalt27/dev)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40cobalt27%2Fdev)](https://www.npmjs.com/package/@cobalt27/dev)
+
+<br />
 <div align="center">
 
 ![Quick-Demo](https://github.com/user-attachments/assets/ae863b5c-7edf-4215-9607-c2f874d17b5b)
@@ -66,10 +73,10 @@ touch server/ctx.ts
 // The `ctx.ts` file must use a default export to export an async function
 // as the GraphQL context factory.
 export default async function ({ headers }: CobaltCtxInput) {
-  const userid = headers.get("Authorization") ?? "anonymous";
-  return {
-    userid,
-  };
+    const userid = headers.get("Authorization") ?? "anonymous";
+    return {
+        userid,
+    };
 }
 ```
 
@@ -81,17 +88,17 @@ touch server/operations/profile.ts
 
 ```typescript
 export function Query() {
-  // Use $$ctx(this) helper function to get the GraphQL context value
-  // this is fully typed and `$$ctx` is available in the global scope
+    // Use $$ctx(this) helper function to get the GraphQL context value
+    // this is fully typed and `$$ctx` is available in the global scope
 
-  const { userid } = $$ctx(this);
+    const { userid } = $$ctx(this);
 
-  return {
-    user: userid,
-    profile: {
-      image: "...",
-    },
-  };
+    return {
+        user: userid,
+        profile: {
+            image: "...",
+        },
+    };
 }
 
 // By exporting this you can customize the name of your return type
@@ -130,9 +137,9 @@ touch server/ctx.ts
 // The `ctx.ts` file must use a default export to export an async function
 // as the GraphQL context factory.
 export default async function ({ headers }: CobaltCtxInput) {
-  return {
-    headers,
-  };
+    return {
+        headers,
+    };
 }
 ```
 
@@ -144,22 +151,22 @@ touch server/operations/profile.ts
 
 ```typescript
 export function Query() {
-  // Use $$auth(this) helper function to get the token of the authenticated user
-  // this is fully typed and `$$auth` is available in the global scope
+    // Use $$auth(this) helper function to get the token of the authenticated user
+    // this is fully typed and `$$auth` is available in the global scope
 
-  const { token } = $$auth(this);
-  // also `query` and `mutation` are available here, so you can use the Cobalt Auth SDK
-  // this gives you access to all Identity Management Platform (IdMP) operations
+    const { token } = $$auth(this);
+    // also `query` and `mutation` are available here, so you can use the Cobalt Auth SDK
+    // this gives you access to all Identity Management Platform (IdMP) operations
 
-  // The properties of the token are defined in the `auth.ts` file
-  const { email } = token.subject.properties;
+    // The properties of the token are defined in the `auth.ts` file
+    const { email } = token.subject.properties;
 
-  return {
-    user: email,
-    profile: {
-      image: "...",
-    },
-  };
+    return {
+        user: email,
+        profile: {
+            image: "...",
+        },
+    };
 }
 
 // By exporting this you can customize the name of your return type
@@ -181,58 +188,58 @@ import { MemoryStorage } from "@openauthjs/openauth/storage/memory";
 import { CodeProvider } from "@openauthjs/openauth/provider/code";
 
 export default {
-  clientId: "client_id",
-  issuer: {
-    cobalt: auth({
-      models: {
-        user: {
-          id: "String @id @default(ulid())",
-        },
-      },
-      tokens: {
-        user: {
-          id: string(),
-          email: string(),
-        },
-      },
-      providers: {
-        code: CodeProvider<{ email: string }>(
-          CodeUI({
-            mode: "email",
-            sendCode: async (email, code) => {
-              console.log(email, code);
+    clientId: "client_id",
+    issuer: {
+        cobalt: auth({
+            models: {
+                user: {
+                    id: "String @id @default(ulid())",
+                },
             },
-          }),
-        ),
-      },
-      openauth: (sdk) => ({
-        storage: MemoryStorage({
-            persist: "./persist.json",
+            tokens: {
+                user: {
+                    id: string(),
+                    email: string(),
+                },
+            },
+            providers: {
+                code: CodeProvider<{ email: string }>(
+                    CodeUI({
+                        mode: "email",
+                        sendCode: async (email, code) => {
+                            console.log(email, code);
+                        },
+                    }),
+                ),
+            },
+            openauth: (sdk) => ({
+                storage: MemoryStorage({
+                    persist: "./persist.json",
+                }),
+                success: async (ctx, value) => {
+                    if (value.provider === "code") {
+                        const email = value.claims.email;
+
+                        const user = await sdk.mutation.adminAuthSignIn({
+                            user_id: email,
+                            claims: {
+                                email,
+                            },
+                            provider: "email",
+                        })(({ id }) => ({ id }));
+
+                        if (!user?.id) {
+                            throw new Error("User not found");
+                        }
+
+                        return ctx.subject("user", { id: user.id, email });
+                    }
+
+                    throw new Error("Invalid provider");
+                },
+            }),
         }),
-        success: async (ctx, value) => {
-          if (value.provider === "code") {
-            const email = value.claims.email;
-
-            const user = await sdk.mutation.adminAuthSignIn({
-              user_id: email,
-              claims: {
-                email,
-              },
-              provider: "email",
-            })(({ id }) => ({ id }));
-
-            if (!user?.id) {
-              throw new Error("User not found");
-            }
-
-            return ctx.subject("user", { id: user.id, email });
-          }
-
-          throw new Error("Invalid provider");
-        },
-      }),
-    }),
-  },
+    },
 };
 ```
 
@@ -263,19 +270,19 @@ sdk.init({
 
 // use the makeAuthLoader function to create a loader for your frontend
 export const loader = makeAuthLoader(
-  {
-    clientID: "client_id", // name your client id here
-    issuer: "http://localhost:4000", // url of cobalt auth
-    unprotectedPaths: ["/error", "/logout"],
-  },
-  (tokens) => {
-    sdk.init({
-      auth: tokens.tokens.access,
-    });
-  },
-  (error) => {
-    return redirect("/error" + "?error=" + error);
-  },
+    {
+        clientID: "client_id", // name your client id here
+        issuer: "http://localhost:4000", // url of cobalt auth
+        unprotectedPaths: ["/error", "/logout"],
+    },
+    (tokens) => {
+        sdk.init({
+            auth: tokens.tokens.access,
+        });
+    },
+    (error) => {
+        return redirect("/error" + "?error=" + error);
+    },
 );
 // ... the rest of your root.tsx file ...
 ```
