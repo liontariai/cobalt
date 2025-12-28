@@ -1076,51 +1076,199 @@ describe("E2E", () => {
         });
     });
 
-    describe("Query complex mixed root fields", () => {
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.complex.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/complex", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Complex", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.complex.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/complex", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const result = await sdk.query.rootMixed({
-                arg: "test",
-            })();
+                const result = await sdk.query.rootMixed();
 
-            expect(result.scalar).toBe("test");
-            expect(result.list).toEqual([1, 2, 3]);
-            expect(result.nested.value).toBe("nested");
-            expect(result.nested.items).toEqual(["a", "b", "c"]);
+                expect(result.scalar).toBe("Hello, World!");
+                expect(result.list).toEqual([1, 2, 3]);
+                expect(result.nested.value).toBe("nested");
+                expect(result.nested.items).toEqual(["a", "b", "c"]);
+            });
+
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.complex.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/complex", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const result = await sdk.query.rootWithArgsMixed({
+                    arg1: "Hello, World!",
+                    arg2: 1,
+                    arg3: true,
+                    arg4: ["a", "b", "c"],
+                })();
+
+                expect(result.scalar).toBe("Hello, World!");
+                expect(result.list).toEqual([1, 1, 1]);
+                expect(result.nested.value).toBe(true);
+                expect(result.nested.items).toEqual(["a", "b", "c"]);
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.complex.root").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/complex", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const mixed = sdk.query.rootMixed().$lazy;
+
+                    const result = await mixed();
+                    expect(result.scalar).toBe("Hello, World!");
+                    expect(result.list).toEqual([1, 2, 3]);
+                    expect(result.nested.value).toBe("nested");
+                    expect(result.nested.items).toEqual(["a", "b", "c"]);
+                });
+
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.complex.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/complex", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const mixed = sdk.query.rootWithArgsMixed({
+                        arg1: _,
+                        arg2: _,
+                        arg3: _,
+                        arg4: _,
+                    })().$lazy;
+
+                    const result = await mixed({ arg1: "Hello, World!", arg2: 1, arg3: true, arg4: ["a", "b", "c"] });
+                    expect(result.scalar).toBe("Hello, World!");
+                    expect(result.list).toEqual([1, 1, 1]);
+                    expect(result.nested.value).toBe(true);
+                    expect(result.nested.items).toEqual(["a", "b", "c"]);
+                });
+            });
         });
-    });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.complex.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/complex", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-    describe("Query complex mixed fields in objects", () => {
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.complex.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/complex", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const result = await sdk.query.inObjMixed();
 
-            const result = await sdk.query.inObjMixed({
-                arg: "test",
-            })();
+                expect(result.result.scalar).toBe("Hello, World!");
+                expect(result.result.list).toEqual([1, 2, 3]);
+                expect(result.result.nested.value).toBe("nested");
+                expect(result.result.nested.items).toEqual(["a", "b", "c"]);
+            });
 
-            expect(result.result.scalar).toBe("test");
-            expect(result.result.list).toEqual([1, 2, 3]);
-            expect(result.result.nested.value).toBe("nested");
-            expect(result.result.nested.items).toEqual(["a", "b", "c"]);
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.complex.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/complex", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const result = await sdk.query.inObjWithArgsMixed({
+                    arg1: "Hello, World!",
+                    arg2: 1,
+                    arg3: true,
+                    arg4: ["a", "b", "c"],
+                })();
+                expect(result.result.scalar).toBe("Hello, World!");
+                expect(result.result.list).toEqual([1, 1, 1]);
+                expect(result.result.nested.value).toBe(true);
+                expect(result.result.nested.items).toEqual(["a", "b", "c"]);
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.complex.in-obj").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/complex", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const mixed = sdk.query.inObjMixed().$lazy;
+
+                    const result = await mixed();
+                    expect(result.result.scalar).toBe("Hello, World!");
+                    expect(result.result.list).toEqual([1, 2, 3]);
+                    expect(result.result.nested.value).toBe("nested");
+                    expect(result.result.nested.items).toEqual(["a", "b", "c"]);
+                });
+
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.complex.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/complex", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const mixed = sdk.query.inObjWithArgsMixed({
+                        arg1: _,
+                        arg2: _,
+                        arg3: _,
+                        arg4: _,
+                    })().$lazy;
+
+                    const result = await mixed({ arg1: "Hello, World!", arg2: 1, arg3: true, arg4: ["a", "b", "c"] });
+                    expect(result.result.scalar).toBe("Hello, World!");
+                    expect(result.result.list).toEqual([1, 1, 1]);
+                    expect(result.result.nested.value).toBe(true);
+                    expect(result.result.nested.items).toEqual(["a", "b", "c"]);
+                });
+            });
         });
     });
 });
