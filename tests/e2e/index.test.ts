@@ -109,180 +109,373 @@ describe("E2E", () => {
         // Optionally: reset database or state before each test
     });
 
-    describe("Query scalar root fields", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/scalars", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Scalars", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/scalars", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const string = await sdk.query.rootString;
-            const number = await sdk.query.rootNumber;
-            const bool = await sdk.query.rootBoolean;
+                const string = await sdk.query.rootString;
+                const number = await sdk.query.rootNumber;
+                const bool = await sdk.query.rootBoolean;
 
-            expect(string).toBe("Hello, World!");
-            expect(number).toBe(100);
-            expect(bool).toBe(true);
-        });
-
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.scalars.root.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/scalars", {
-                    operationFilesGlob: "root/with-args/*.ts",
-                    typeFilesGlob: "root/with-args/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
-
-            const sdk = _sdk;
-
-            const string = await sdk.query.rootWithArgsString({
-                arg: "Hello, World!",
+                expect(string).toBe("Hello, World!");
+                expect(number).toBe(100);
+                expect(bool).toBe(true);
             });
-            const number = await sdk.query.rootWithArgsNumber({ arg: 100 });
-            const bool = await sdk.query.rootWithArgsBoolean({ arg: true });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.scalars.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/scalars", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            expect(string).toBe("Hello, World!");
-            expect(number).toBe(100);
-            expect(bool).toBe(true);
-        });
-    });
+                const sdk = _sdk;
 
-    describe("Query scalar fields in objects", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.scalars.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/scalars", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const string = await sdk.query.rootWithArgsString({
+                    arg: "Hello, World!",
+                });
+                const number = await sdk.query.rootWithArgsNumber({ arg: 100 });
+                const bool = await sdk.query.rootWithArgsBoolean({ arg: true });
 
-            const sdk = _sdk;
-
-            const string = await sdk.query.inObjString();
-            const number = await sdk.query.inObjNumber();
-            const bool = await sdk.query.inObjBoolean();
-            const mixed = await sdk.query.inObjMixed();
-
-            expect(string.string).toBe("Hello, World!");
-            expect(number.number).toBe(100);
-            expect(bool.boolean).toBe(true);
-
-            expect(mixed.string).toBe("Hello, World!");
-            expect(mixed.number).toBe(100);
-            expect(mixed.boolean).toBe(true);
-        });
-
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.scalars.in-obj.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/scalars", {
-                    operationFilesGlob: "in-obj/with-args/*.ts",
-                    typeFilesGlob: "in-obj/with-args/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
-
-            const sdk = _sdk;
-
-            const string = await sdk.query.inObjWithArgsString({ arg: "Hello, World!" })();
-            const number = await sdk.query.inObjWithArgsNumber({ arg: 100 })();
-            const bool = await sdk.query.inObjWithArgsBoolean({ arg: true })();
-
-            expect(string.string).toBe("Hello, World!");
-            expect(number.number).toBe(100);
-            expect(bool.boolean).toBe(true);
-        });
-    });
-
-    describe("Query list root fields", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.lists.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/lists", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
-
-            const sdk = _sdk;
-
-            const string = await sdk.query.rootString;
-            const number = await sdk.query.rootNumber;
-            const bool = await sdk.query.rootBoolean;
-
-            expect(string).toEqual(["Hello", "World", "!"]);
-            expect(number).toEqual([1, 2, 3, 4, 5]);
-            expect(bool).toEqual([true, false, true]);
-        });
-
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.lists.root.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/lists", {
-                    operationFilesGlob: "root/with-args/*.ts",
-                    typeFilesGlob: "root/with-args/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
-
-            const sdk = _sdk;
-
-            const string = await sdk.query.rootWithArgsString({
-                arg: ["Hello", "World", "!"],
+                expect(string).toBe("Hello, World!");
+                expect(number).toBe(100);
+                expect(bool).toBe(true);
             });
 
-            expect(string).toEqual(["Hello", "World", "!"]);
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/scalars", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const number = sdk.query.rootNumber.$lazy;
+                    const string = sdk.query.rootString.$lazy;
+                    const bool = sdk.query.rootBoolean.$lazy;
+
+                    expect(await string()).toBe("Hello, World!");
+                    expect(await number()).toBe(100);
+                    expect(await bool()).toBe(true);
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.scalars.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/scalars", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = sdk.query.rootWithArgsString({
+                        arg: _,
+                    }).$lazy;
+                    const number = sdk.query.rootWithArgsNumber({ arg: _ }).$lazy;
+                    const bool = sdk.query.rootWithArgsBoolean({ arg: _ }).$lazy;
+
+                    expect(await string({ arg: "Hello, World!" })).toBe("Hello, World!");
+                    expect(await number({ arg: 100 })).toBe(100);
+                    expect(await bool({ arg: true })).toBe(true);
+                });
+            });
+        });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.scalars.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/scalars", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const string = await sdk.query.inObjString();
+                const number = await sdk.query.inObjNumber();
+                const bool = await sdk.query.inObjBoolean();
+                const mixed = await sdk.query.inObjMixed();
+
+                expect(string.string).toBe("Hello, World!");
+                expect(number.number).toBe(100);
+                expect(bool.boolean).toBe(true);
+
+                expect(mixed.string).toBe("Hello, World!");
+                expect(mixed.number).toBe(100);
+                expect(mixed.boolean).toBe(true);
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.scalars.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/scalars", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const string = await sdk.query.inObjWithArgsString({ arg: "Hello, World!" })();
+                const number = await sdk.query.inObjWithArgsNumber({ arg: 100 })();
+                const bool = await sdk.query.inObjWithArgsBoolean({ arg: true })();
+                const mixed = await sdk.query.inObjWithArgsMixed({ arg1: "Hello, World!", arg2: 100, arg3: true })();
+
+                expect(string.string).toBe("Hello, World!");
+                expect(number.number).toBe(100);
+                expect(bool.boolean).toBe(true);
+
+                expect(mixed.string).toBe("Hello, World!");
+                expect(mixed.number).toBe(100);
+                expect(mixed.boolean).toBe(true);
+            });
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.scalars.in-obj").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/scalars", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = sdk.query.inObjString().$lazy;
+                    const number = sdk.query.inObjNumber().$lazy;
+                    const bool = sdk.query.inObjBoolean().$lazy;
+                    const mixed = sdk.query.inObjMixed().$lazy;
+
+                    const [resString, resNumber, resBool, resMixed] = await Promise.all([string(), number(), bool(), mixed()]);
+
+                    expect(resString.string).toBe("Hello, World!");
+                    expect(resNumber.number).toBe(100);
+                    expect(resBool.boolean).toBe(true);
+
+                    expect(resMixed.string).toBe("Hello, World!");
+                    expect(resMixed.number).toBe(100);
+                    expect(resMixed.boolean).toBe(true);
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.scalars.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/scalars", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = await sdk.query.inObjWithArgsString({ arg: _ })().$lazy;
+                    const number = await sdk.query.inObjWithArgsNumber({ arg: _ })().$lazy;
+                    const bool = await sdk.query.inObjWithArgsBoolean({ arg: _ })().$lazy;
+                    const mixed = await sdk.query.inObjWithArgsMixed({ arg1: _, arg2: _, arg3: _ })().$lazy;
+
+                    const [resString, resNumber, resBool, resMixed] = await Promise.all([
+                        string({ arg: "Hello, World!" }),
+                        number({ arg: 100 }),
+                        bool({ arg: true }),
+                        mixed({ arg1: "Hello, World!", arg2: 100, arg3: true }),
+                    ]);
+
+                    expect(resString.string).toBe("Hello, World!");
+                    expect(resNumber.number).toBe(100);
+                    expect(resBool.boolean).toBe(true);
+
+                    expect(resMixed.string).toBe("Hello, World!");
+                    expect(resMixed.number).toBe(100);
+                    expect(resMixed.boolean).toBe(true);
+                });
+            });
         });
     });
 
-    describe("Query list fields in objects", () => {
-        test("Without arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.lists.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/lists", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Lists of Scalars", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.lists.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/lists", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const string = await sdk.query.inObjString();
-            const number = await sdk.query.inObjNumber();
-            const bool = await sdk.query.inObjBoolean();
+                const string = await sdk.query.rootString;
+                const number = await sdk.query.rootNumber;
+                const bool = await sdk.query.rootBoolean;
 
-            expect(string.strings).toEqual(["Hello", "World", "!"]);
-            expect(number.numbers).toEqual([1, 2, 3, 4, 5]);
-            expect(bool.booleans).toEqual([true, false, true]);
+                expect(string).toEqual(["Hello", "World", "!"]);
+                expect(number).toEqual([1, 2, 3, 4, 5]);
+                expect(bool).toEqual([true, false, true]);
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.lists.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/lists", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const string = await sdk.query.rootWithArgsString({
+                    arg: ["Hello", "World", "!"],
+                });
+
+                expect(string).toEqual(["Hello", "World", "!"]);
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/scalars", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const number = sdk.query.rootNumber.$lazy;
+                    const string = sdk.query.rootString.$lazy;
+                    const bool = sdk.query.rootBoolean.$lazy;
+
+                    expect(await string()).toBe("Hello, World!");
+                    expect(await number()).toBe(100);
+                    expect(await bool()).toBe(true);
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.lists.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/lists", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = sdk.query.rootWithArgsString({
+                        arg: _,
+                    }).$lazy;
+
+                    expect(await string({ arg: ["Hello", "World", "!"] })).toEqual(["Hello", "World", "!"]);
+                });
+            });
         });
+        describe("In objects", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.lists.in-obj").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/lists", {
+                        operationFilesGlob: "in-obj/*.ts",
+                        typeFilesGlob: "in-obj/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.lists.in-obj.with-args").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/lists", {
-                    operationFilesGlob: "in-obj/with-args/*.ts",
-                    typeFilesGlob: "in-obj/with-args/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const string = await sdk.query.inObjString();
+                const number = await sdk.query.inObjNumber();
+                const bool = await sdk.query.inObjBoolean();
 
-            const string = await sdk.query.inObjWithArgsString({ arg: ["Hello", "World", "!"] })();
+                expect(string.strings).toEqual(["Hello", "World", "!"]);
+                expect(number.numbers).toEqual([1, 2, 3, 4, 5]);
+                expect(bool.booleans).toEqual([true, false, true]);
+            });
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.lists.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/lists", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            expect(string.strings).toEqual(["Hello", "World", "!"]);
+                const sdk = _sdk;
+
+                const string = await sdk.query.inObjWithArgsString({ arg: ["Hello", "World", "!"] })();
+
+                expect(string.strings).toEqual(["Hello", "World", "!"]);
+            });
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.lists.in-obj").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/lists", {
+                            operationFilesGlob: "in-obj/*.ts",
+                            typeFilesGlob: "in-obj/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const string = sdk.query.inObjString().$lazy;
+                    const number = sdk.query.inObjNumber().$lazy;
+                    const bool = sdk.query.inObjBoolean().$lazy;
+
+                    expect(await string()).toEqual({ strings: ["Hello", "World", "!"] });
+                    expect(await number()).toEqual({ numbers: [1, 2, 3, 4, 5] });
+                    expect(await bool()).toEqual({ booleans: [true, false, true] });
+                });
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.lists.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/lists", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = sdk.query.inObjWithArgsString({ arg: _ })().$lazy;
+
+                    expect(await string({ arg: ["Hello", "World", "!"] })).toEqual({ strings: ["Hello", "World", "!"] });
+                });
+            });
         });
     });
 
@@ -496,11 +689,11 @@ describe("E2E", () => {
             const sdk = _sdk;
 
             const results: string[] = [];
-            for await (const value of await sdk.subscription.rootString.$lazy()) {
+            for await (const value of await sdk.subscription.rootString) {
                 results.push(value);
             }
 
-            expect([...results].map((r) => r)).toEqual(["Hello", "World"]);
+            expect(results).toEqual(["Hello", "World"]);
         });
     });
 
@@ -518,7 +711,7 @@ describe("E2E", () => {
             const sdk = _sdk;
 
             const results: Array<{ message: string }> = [];
-            for await (const value of await sdk.subscription.inObjString().$lazy()) {
+            for await (const value of await sdk.subscription.inObjString()) {
                 results.push(value);
             }
 
