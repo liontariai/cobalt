@@ -12,14 +12,14 @@
 </strong>
 </h2>
 <br />
-<br />
-
+<div align="center">
+  
 [![GitHub last commit](https://img.shields.io/github/last-commit/liontariai/cobalt)](https://github.com/liontariai/cobalt/commits/main/)
 [![NPM Version](https://img.shields.io/npm/v/%40cobalt27%2Fdev)](https://www.npmjs.com/package/@cobalt27/dev)
 [![NPM Downloads](https://img.shields.io/npm/dm/%40cobalt27%2Fdev)](https://www.npmjs.com/package/@cobalt27/dev)
 
 <br />
-<div align="center">
+
 
 ![Quick-Demo](https://github.com/user-attachments/assets/ae863b5c-7edf-4215-9607-c2f874d17b5b)
 
