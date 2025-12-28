@@ -780,45 +780,123 @@ describe("E2E", () => {
         });
     });
 
-    describe("Mutation root fields", () => {
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.mutations.root").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/mutations", {
-                    operationFilesGlob: "root/*.ts",
-                    typeFilesGlob: "root/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+    describe("Mutations", () => {
+        describe("Root fields", () => {
+            test("No args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.mutations.root").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/mutations", {
+                        operationFilesGlob: "root/*.ts",
+                        typeFilesGlob: "root/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-            const sdk = _sdk;
+                const sdk = _sdk;
 
-            const result = await sdk.mutation.rootString({
-                arg: "Hello, World!",
+                const result = await sdk.mutation.rootString;
+
+                expect(result).toBe("Hello, World!");
             });
 
-            expect(result).toBe("Hello, World!");
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.mutations.root.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/mutations", {
+                        operationFilesGlob: "root/with-args/*.ts",
+                        typeFilesGlob: "root/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
+
+                const sdk = _sdk;
+
+                const result = await sdk.mutation.rootWithArgsString({
+                    arg: "Hello, World!",
+                });
+
+                expect(result).toBe("Hello, World!");
+            });
+
+            describe("with $lazy", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./operations/.sdks/operations.mutations.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./operations/mutations", {
+                            operationFilesGlob: "root/*.ts",
+                            typeFilesGlob: "root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const string = sdk.mutation.rootString.$lazy;
+
+                    expect(await string()).toBe("Hello, World!");
+                });
+
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.mutations.root.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/mutations", {
+                            operationFilesGlob: "root/with-args/*.ts",
+                            typeFilesGlob: "root/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = sdk.mutation.rootWithArgsString({
+                        arg: _,
+                    }).$lazy;
+
+                    expect(await string({ arg: "Hello, World!" })).toBe("Hello, World!");
+                });
+            });
         });
-    });
+        describe("In objects", () => {
+            test("With args", async () => {
+                const _sdk = (await import("./operations/.sdks/operations.mutations.in-obj.with-args").catch(console.error))?.default;
+                (
+                    await makeHandlerFromDir("./operations/mutations", {
+                        operationFilesGlob: "in-obj/with-args/*.ts",
+                        typeFilesGlob: "in-obj/with-args/*.ts",
+                    })
+                )(_sdk);
+                if (!_sdk) return;
 
-    describe("Mutation fields in objects", () => {
-        test("With arguments", async () => {
-            const _sdk = (await import("./operations/.sdks/operations.mutations.in-obj").catch(console.error))?.default;
-            (
-                await makeHandlerFromDir("./operations/mutations", {
-                    operationFilesGlob: "in-obj/*.ts",
-                    typeFilesGlob: "in-obj/*.ts",
-                })
-            )(_sdk);
-            if (!_sdk) return;
+                const sdk = _sdk;
 
-            const sdk = _sdk;
+                const result = await sdk.mutation.inObjWithArgsString({
+                    arg: "Hello, World!",
+                })();
 
-            const result = await sdk.mutation.inObjString({
-                arg: "Hello, World!",
-            })();
+                expect(result.result).toBe("Hello, World!");
+            });
+            describe("with $lazy", () => {
+                test("With args", async () => {
+                    const _sdk = await import("./operations/.sdks/operations.mutations.in-obj.with-args").catch(console.error);
+                    (
+                        await makeHandlerFromDir("./operations/mutations", {
+                            operationFilesGlob: "in-obj/with-args/*.ts",
+                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        })
+                    )(_sdk?.default);
+                    if (!_sdk) return;
 
-            expect(result.result).toBe("Hello, World!");
+                    const sdk = _sdk.default;
+                    const _ = _sdk._;
+
+                    const string = sdk.mutation.inObjWithArgsString({
+                        arg: _,
+                    })().$lazy;
+
+                    expect((await string({ arg: "Hello, World!" })).result).toBe("Hello, World!");
+                });
+            });
         });
     });
 

@@ -1,3 +1,3 @@
-export function Mutation() {
+export function Query() {
     return "Hello, World!";
 }
