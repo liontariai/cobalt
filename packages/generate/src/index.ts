@@ -52,7 +52,7 @@ export class Generator {
         return typesFiles;
     }
 
-    public async generate(operationsDir: string, options: CodegenOptions) {
+    public async generate(operationsDir: string, options: CodegenOptions = {}) {
         const serverDir = path.resolve(operationsDir, "..");
         const typesDir = path.join(serverDir, "types");
 
