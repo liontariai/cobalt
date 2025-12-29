@@ -3,6 +3,8 @@
 import { Command } from "commander";
 import type { AuthorizationState } from "@openauthjs/openauth/issuer";
 import { createHandler } from "graphql-sse/lib/use/fetch";
+import type { Server } from "bun";
+import type { BunWebSocketData } from "hono/bun";
 
 // strange work around
 import { makeGraphQLHandler } from "../util-2";
@@ -35,7 +37,7 @@ export const devCommand = (program: Command) => {
 
             const serverDir = path.resolve(dir!, "..");
 
-            const startDev = async (prevServer?: Server) => {
+            const startDev = async (prevServer?: Server<BunWebSocketData>) => {
                 let authserver:
                     | import("hono/tiny").Hono<
                           {
@@ -129,7 +131,7 @@ export const devCommand = (program: Command) => {
                 };
 
                 const fetchFn: (
-                    this: Server,
+                    this: Server<BunWebSocketData>,
                     req: Request,
                 ) => Promise<Response> = async (req) => {
                     const path = new URL(req.url).pathname;
@@ -191,6 +193,7 @@ export const devCommand = (program: Command) => {
                         port: +options.port,
                         idleTimeout: 0,
                         fetch: fetchFn,
+                        reusePort: true,
                     });
                     console.log(`🚀  Server ready at: ${httpServer.url}`);
                     return httpServer;
@@ -199,7 +202,7 @@ export const devCommand = (program: Command) => {
                 return prevServer;
             };
 
-            let httpServer: Server | undefined;
+            let httpServer: Server<BunWebSocketData> | undefined;
             httpServer = await startDev();
             console.log("🔍 Watching for changes...");
 
