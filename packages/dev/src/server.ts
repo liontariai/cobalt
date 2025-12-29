@@ -88,7 +88,7 @@ export const startServer = () => {
                 });
             }
 
-            if (path === "/graphql") {
+            if (path === "/graphql" || path === "/cobalt") {
                 // handle non-sse requests
                 if (!req.headers.get("accept")?.includes("text/event-stream")) {
                     try {

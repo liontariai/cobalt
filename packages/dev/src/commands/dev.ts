@@ -140,7 +140,7 @@ export const devCommand = (program: Command) => {
                         });
                     }
 
-                    if (path === "/graphql") {
+                    if (path === "/graphql" || path === "/cobalt") {
                         // handle non-sse requests
                         if (
                             !req.headers
