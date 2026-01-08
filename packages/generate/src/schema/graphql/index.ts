@@ -38,7 +38,7 @@ export class GeneratorSchemaGQL {
                 );
             }
         }
-        return scalars.join("\n");
+        return scalars.filter((v, i, arr) => i === arr.indexOf(v)).join("\n");
     }
 
     public makeEnumTypes(): string {
