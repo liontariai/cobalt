@@ -82,7 +82,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
             return "";
         }
 
-        let name = typeMeta.name;
+        let name = typeMeta.name.replaceAll("!", "");
         name = typeMeta.isList
             ? name.replaceAll("[", "").replaceAll("]", "")
             : name;
