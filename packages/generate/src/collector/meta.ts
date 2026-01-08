@@ -531,9 +531,16 @@ export const gatherMeta = (
         if (typeMeta.isEnum && typeMeta.enumValues.length === 1) {
             typeMeta.name = `Constant_${typeMeta.enumValues[0].name}`;
         } else if (typeMeta.isUnion) {
-            typeMeta.name = `${typeMeta.possibleTypes
-                .map((t) => t.name.replaceAll("!", ""))
-                .join("Or")}`;
+            if (
+                !typeMeta.name ||
+                (typeMeta.name &&
+                    (typeMeta.name.includes(" ") ||
+                        typeMeta.name.includes("|")))
+            ) {
+                typeMeta.name = `${typeMeta.possibleTypes
+                    .map((t) => t.name.replaceAll("!", ""))
+                    .join("Or")}`;
+            }
         }
 
         typeMeta.name = makeFriendlyNameWithArray(
@@ -1666,6 +1673,10 @@ export const gatherMetaForType = (
 
     if (meta.isScalar && meta.inputFields.length > 0) {
         meta.isScalar = false;
+    } else if (meta.isObject && meta.fields.length === 0) {
+        meta.isObject = false;
+        meta.isScalar = true;
+        meta.scalarTSTypeIsFinal = true;
     } else if (
         meta.isScalar ||
         meta.isObject ||
