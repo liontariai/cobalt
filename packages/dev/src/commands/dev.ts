@@ -454,20 +454,31 @@ export const devCommand = (program: Command) => {
             console.log("🔍 Watching for changes...");
 
             const watcher = watch(serverDir, { recursive: true });
+            const md5hashes = new Map<string, string>();
             for await (const event of watcher) {
                 if (event.filename) {
-                    console.log(
-                        `🔍 Detected ${event.eventType} in ${event.filename}`,
-                    );
                     const changedFile = Bun.resolveSync(
                         `./${event.filename}`,
                         serverDir,
                     );
+                    const fileContent = await Bun.file(changedFile).text();
+                    const md5hash = (
+                        await Bun.MD5.hash(fileContent)
+                    ).toString();
+                    if (md5hash !== md5hashes.get(changedFile)) {
+                        md5hashes.set(changedFile, md5hash);
+                        console.log(
+                            `🔍 Detected ${event.eventType} in ${event.filename}`,
+                        );
+                    } else {
+                        continue;
+                    }
+
                     if (require.cache[changedFile]) {
                         delete require.cache[changedFile];
                     }
+                    httpServer = await startDev(httpServer);
                 }
-                httpServer = await startDev(httpServer);
             }
         });
 
