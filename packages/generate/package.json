@@ -30,6 +30,7 @@
         "prepublishOnly": "bun run bundle"
     },
     "dependencies": {
+        "@ast-grep/napi": "^0.40.4",
         "@cobalt27/runtime": "workspace:*"
     },
     "devDependencies": {
