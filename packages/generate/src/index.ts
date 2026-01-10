@@ -5,6 +5,7 @@ import { Collector, gatherMeta } from "./collector";
 import { GeneratorSchemaGQL } from "./schema/graphql";
 import type { CodegenOptions, SchemaMeta, TypeMeta } from "./collector/types";
 
+import { parse, Lang } from "@ast-grep/napi";
 export class Generator {
     constructor() {}
 
@@ -121,32 +122,112 @@ export class Generator {
         for (const operation of schemaMeta.operations) {
             if (operation.type.isUnion) {
                 const pureOpTypeName = operation.type.name.replaceAll("!", "");
+                const code = fs.readFileSync(operation.file, "utf-8");
+                const ast = parse(Lang.TypeScript, code);
+                const root = ast.root();
 
-                const reg = new RegExp(
-                    `${operation.operation}\.resolveType(.*)\{`,
-                );
-                let code = fs.readFileSync(operation.file, "utf-8");
-                if (!reg.test(code)) {
-                    code += [
-                        "",
-                        "// Your resolver returns a Union Type. Therefore you must provide a resolveType function that resolves the abstract union type to a concrete type by it's typename.",
-                        "// The following fully-typed template has been added by cobalt. Please make sure it resolves correctly, like the types indicate.",
-                        `${operation.operation}.resolveType = (value: import("$$types").Unions["${pureOpTypeName}"]): import("$$types").UnionsResolveToTypename["${pureOpTypeName}"] => {`,
-                        `    switch(value){`,
-                        `        default:`,
-                        `            return "";`,
-                        `    }`,
-                        `};`,
-                    ].join("\n");
-                    fs.writeFileSync(operation.file, code, "utf-8");
+                // Find the operation function (e.g., export function Query(...))
+                // Handle regular, async, and async generator functions
+                const operationName = operation.operation;
+                const patterns = [
+                    `export async function* ${operationName}($$$ARGS): $$$RET { $$$BODY }`,
+                    `export async function ${operationName}($$$ARGS): $$$RET { $$$BODY }`,
+                    `export function ${operationName}($$$ARGS): $$$RET { $$$BODY }`,
+                ];
+
+                const operationFunctionMatch = patterns
+                    .map((pattern) => root.find(pattern))
+                    .find(Boolean);
+                if (!operationFunctionMatch) continue;
+
+                // Find if resolveType already exists for this operation
+                // Search for any .resolveType assignment and check if it matches our operation
+                const resolveTypePattern = `$OP.resolveType = $$$ASSIGNMENT`;
+                const allResolveTypeMatches = root.findAll(resolveTypePattern);
+                const resolveTypeMatch =
+                    allResolveTypeMatches.find((match) => {
+                        const opMatch = match.getMatch("$OP");
+                        return opMatch?.text() === operation.operation;
+                    }) || null;
+
+                const resolveTypeCode = [
+                    "",
+                    "// Your resolver returns a Union Type. Therefore you must provide a resolveType function that resolves the abstract union type to a concrete type by it's typename.",
+                    "// The following fully-typed template has been added by cobalt. Please make sure it resolves correctly, like the types indicate.",
+                    `${operation.operation}.resolveType = (value: import("$$types").Unions["${pureOpTypeName}"]): import("$$types").UnionsResolveToTypename["${pureOpTypeName}"] => {`,
+                    `    switch(value){`,
+                    `        default:`,
+                    `            return "";`,
+                    `    }`,
+                    `};`,
+                ].join("\n");
+
+                let newCode: string;
+
+                if (resolveTypeMatch) {
+                    // Update existing resolveType function signature
+                    const resolveTypeNode = resolveTypeMatch;
+                    const updatedResolveType = `${operation.operation}.resolveType = (value: import("$$types").Unions["${pureOpTypeName}"]): import("$$types").UnionsResolveToTypename["${pureOpTypeName}"] => {`;
+
+                    // Extract the function body from the existing resolveType
+                    const assignmentMatch =
+                        resolveTypeNode.getMatch("$$$ASSIGNMENT");
+                    if (assignmentMatch) {
+                        // Try to extract the body from arrow function
+                        const arrowFunctionPattern = `($$$PARAMS) => { $$$BODY }`;
+                        const arrowMatch =
+                            assignmentMatch.find(arrowFunctionPattern);
+                        if (arrowMatch) {
+                            const body =
+                                arrowMatch.getMatch("$$$BODY")?.text() || "";
+                            const updatedResolveTypeWithBody = `${updatedResolveType}${body}};`;
+                            const range = resolveTypeNode.range();
+                            newCode =
+                                code.slice(0, range.start.index) +
+                                updatedResolveTypeWithBody +
+                                code.slice(range.end.index);
+                        } else {
+                            // Fallback: replace with new signature and default body
+                            const range = resolveTypeNode.range();
+                            newCode =
+                                code.slice(0, range.start.index) +
+                                updatedResolveType +
+                                [
+                                    `    switch(value){`,
+                                    `        default:`,
+                                    `            return "";`,
+                                    `    }`,
+                                    `};`,
+                                ].join("\n") +
+                                code.slice(range.end.index);
+                        }
+                    } else {
+                        // Fallback: replace the entire assignment
+                        const range = resolveTypeNode.range();
+                        newCode =
+                            code.slice(0, range.start.index) +
+                            updatedResolveType +
+                            [
+                                `    switch(value){`,
+                                `        default:`,
+                                `            return "";`,
+                                `    }`,
+                                `};`,
+                            ].join("\n") +
+                            code.slice(range.end.index);
+                    }
                 } else {
-                    // If resolveType is present, update the function to use new value and return types
-                    code = code.replace(
-                        new RegExp(`${operation.operation}\.resolveType(.*)\{`),
-                        `${operation.operation}.resolveType = (value: import("$$$types").Unions["${pureOpTypeName}"]): import("$$$types").UnionsResolveToTypename["${pureOpTypeName}"] => {`,
-                    );
-                    fs.writeFileSync(operation.file, code, "utf-8");
+                    // Insert resolveType right after the operation function
+                    const range = operationFunctionMatch.range();
+                    const insertPosition = range.end.index;
+                    newCode =
+                        code.slice(0, insertPosition) +
+                        "\n" +
+                        resolveTypeCode +
+                        code.slice(insertPosition);
                 }
+
+                fs.writeFileSync(operation.file, newCode, "utf-8");
             }
         }
     }
