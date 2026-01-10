@@ -120,7 +120,11 @@ export class Generator {
 
     private syncResolveTypeFunctions(schemaMeta: SchemaMeta) {
         for (const operation of schemaMeta.operations) {
-            if (operation.type.isUnion) {
+            if (
+                operation.type.isUnion &&
+                !operation.type.isScalar &&
+                operation.type.isObject
+            ) {
                 const pureOpTypeName = operation.type.name.replaceAll("!", "");
                 const code = fs.readFileSync(operation.file, "utf-8");
                 const ast = parse(Lang.TypeScript, code);
@@ -146,7 +150,7 @@ export class Generator {
                 const allResolveTypeMatches = root.findAll(resolveTypePattern);
                 const resolveTypeMatch =
                     allResolveTypeMatches.find((match) => {
-                        const opMatch = match.getMatch("$OP");
+                        const opMatch = match.getMatch("OP");
                         return opMatch?.text() === operation.operation;
                     }) || null;
 
@@ -180,7 +184,7 @@ export class Generator {
                         if (arrowMatch) {
                             const body =
                                 arrowMatch.getMatch("$$$BODY")?.text() || "";
-                            const updatedResolveTypeWithBody = `${updatedResolveType}${body}};`;
+                            const updatedResolveTypeWithBody = `${updatedResolveType}\n${body}}`;
                             const range = resolveTypeNode.range();
                             newCode =
                                 code.slice(0, range.start.index) +
@@ -193,6 +197,7 @@ export class Generator {
                                 code.slice(0, range.start.index) +
                                 updatedResolveType +
                                 [
+                                    "",
                                     `    switch(value){`,
                                     `        default:`,
                                     `            return "";`,
@@ -208,6 +213,7 @@ export class Generator {
                             code.slice(0, range.start.index) +
                             updatedResolveType +
                             [
+                                "",
                                 `    switch(value){`,
                                 `        default:`,
                                 `            return "";`,
