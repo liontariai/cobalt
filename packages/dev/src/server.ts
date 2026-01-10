@@ -133,7 +133,10 @@ export const startServer = () => {
                     });
                 }
             }
-            if (path.startsWith("/cobalt/sdk")) {
+            if (
+                process.env.ENABLE_SDK_INSTALL_ENDPOINT &&
+                path.startsWith("/cobalt/sdk")
+            ) {
                 const Samarium = await import("@samarium.sdk/make");
                 const sdk = await new Samarium.GraphQLGenerator.Generator(
                     Samarium.Flavors.GraphQL.default,
