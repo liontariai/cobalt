@@ -159,9 +159,11 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                 name = name.replaceAll("!", "");
 
                 if (typeMeta.fields.length === 0) {
-                    console.warn(
-                        `[makeObjectTypes]: Type "${name}" as zero fields. Skipping in output GQL schema.`,
-                    );
+                    if (!typeMeta.isUnion) {
+                        console.warn(
+                            `[makeObjectTypes]: Type "${name}" as zero fields. Skipping in output GQL schema.`,
+                        );
+                    }
                     continue;
                 }
                 const fieldDefs: string[] = [];
