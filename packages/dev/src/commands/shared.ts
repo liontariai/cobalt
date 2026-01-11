@@ -5,6 +5,10 @@ import prettier from "prettier";
 import { Generator } from "@cobalt27/generate";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { GraphQLGenerator, Flavors } from "@samarium.sdk/make";
+import type {
+    OperationMeta,
+    TypeMeta,
+} from "@cobalt27/generate/src/collector/types";
 
 const cwd = process.cwd();
 
@@ -69,6 +73,12 @@ export const initializeAndCompile = async (
         port: number;
         operationFilesGlob?: string;
         typeFilesGlob?: string;
+        onFileCollected?: (
+            file: string,
+            meta: OperationMeta | TypeMeta,
+            fileType: "operation" | "type" | "union",
+        ) => Promise<void>;
+        $$typesSymbol?: string;
     },
     initCobaltAuthFn?: (authConfigFile: string) => Promise<void>,
     silent: boolean = false,
@@ -157,6 +167,8 @@ export const initializeAndCompile = async (
         {
             operationFilesGlob: options.operationFilesGlob,
             typeFilesGlob: options.typeFilesGlob,
+            onFileCollected: options.onFileCollected,
+            $$typesSymbol: options.$$typesSymbol,
         },
     );
 

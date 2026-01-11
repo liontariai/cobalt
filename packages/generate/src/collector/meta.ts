@@ -110,11 +110,11 @@ const makeHelperTypes = (
     return "";
 };
 
-export const gatherMeta = (
+export const gatherMeta = async (
     operationsDir: string,
     options: CodegenOptions,
     collector: Collector,
-): SchemaMeta => {
+): Promise<SchemaMeta> => {
     const meta: SchemaMeta = {
         types: [],
         operations: [],
@@ -344,6 +344,14 @@ export const gatherMeta = (
                 args: args?.type.fields ?? [],
                 type: ret.type,
             });
+
+            if (options.onFileCollected) {
+                await options.onFileCollected(
+                    file,
+                    meta.operations[meta.operations.length - 1],
+                    "operation",
+                );
+            }
         }
         if (fileType === "type") {
             const typeName = file.split(path.sep).pop()!.replace(".ts", "");
@@ -415,6 +423,10 @@ export const gatherMeta = (
             collector.removeType(rets.type.name);
 
             meta.extendedTypes.push(typeMeta);
+
+            if (options.onFileCollected) {
+                await options.onFileCollected(file, typeMeta, "type");
+            }
         }
     }
 
