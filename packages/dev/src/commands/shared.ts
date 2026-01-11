@@ -121,9 +121,6 @@ export const initializeAndCompile = async (
     let tries = 0;
     if (!ctxFile) {
         do {
-            console.log(
-                `Looking for ctx.ts in: ${path.join(ctxDir, "ctx.ts")}`,
-            );
             tries++;
             ctxDir = path.resolve(ctxDir, "..");
             searchCtxDirs.push(ctxDir);
