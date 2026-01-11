@@ -110,11 +110,11 @@ const makeHelperTypes = (
     return "";
 };
 
-export const gatherMeta = (
+export const gatherMeta = async (
     operationsDir: string,
     options: CodegenOptions,
     collector: Collector,
-): SchemaMeta => {
+): Promise<SchemaMeta> => {
     const meta: SchemaMeta = {
         types: [],
         operations: [],
@@ -144,19 +144,19 @@ export const gatherMeta = (
         process.exit(1);
     }
 
-    const files = [
-        ...new Glob(
-            `${operationsDir}/${options.operationFilesGlob ?? "**/*.ts"}`,
-        ).scanSync(),
+    const operationFiles = new Glob(
+        `${operationsDir}/${options.operationFilesGlob ?? "**/*.ts"}`,
+    );
+    const files = [...operationFiles.scanSync()].filter(Boolean) as string[];
 
-        // the order is important, to have all types in the collector already
-        // and only extend them with additional field definitions
-        ...(fs.existsSync(typesDir)
-            ? new Glob(
-                  `${typesDir}/${options.typeFilesGlob ?? "**/*.ts"}`,
-              ).scanSync()
-            : []),
-    ].filter(Boolean) as string[];
+    const typeFiles = new Glob(
+        `${typesDir}/${options.typeFilesGlob ?? "**/*.ts"}`,
+    );
+    if (fs.existsSync(typesDir)) {
+        try {
+            files.push(...typeFiles.scanSync());
+        } catch (e) {}
+    }
 
     const notResolvableModules: {
         moduleName: string;
@@ -274,7 +274,7 @@ export const gatherMeta = (
                 collector.removeType("RESOLVER!");
 
                 console.error(e);
-                console.log(`${resolverName} is not a valid resolver`);
+                console.error(`${resolverName} is not a valid resolver`);
                 continue;
             }
 
@@ -344,6 +344,14 @@ export const gatherMeta = (
                 args: args?.type.fields ?? [],
                 type: ret.type,
             });
+
+            if (options.onFileCollected) {
+                await options.onFileCollected(
+                    file,
+                    meta.operations[meta.operations.length - 1],
+                    "operation",
+                );
+            }
         }
         if (fileType === "type") {
             const typeName = file.split(path.sep).pop()!.replace(".ts", "");
@@ -415,6 +423,10 @@ export const gatherMeta = (
             collector.removeType(rets.type.name);
 
             meta.extendedTypes.push(typeMeta);
+
+            if (options.onFileCollected) {
+                await options.onFileCollected(file, typeMeta, "type");
+            }
         }
     }
 
@@ -531,9 +543,16 @@ export const gatherMeta = (
         if (typeMeta.isEnum && typeMeta.enumValues.length === 1) {
             typeMeta.name = `Constant_${typeMeta.enumValues[0].name}`;
         } else if (typeMeta.isUnion) {
-            typeMeta.name = `${typeMeta.possibleTypes
-                .map((t) => t.name.replaceAll("!", ""))
-                .join("Or")}`;
+            if (
+                !typeMeta.name ||
+                (typeMeta.name &&
+                    (typeMeta.name.includes(" ") ||
+                        typeMeta.name.includes("|")))
+            ) {
+                typeMeta.name = `${typeMeta.possibleTypes
+                    .map((t) => t.name.replaceAll("!", ""))
+                    .join("Or")}`;
+            }
         }
 
         typeMeta.name = makeFriendlyNameWithArray(
@@ -1063,6 +1082,7 @@ export const gatherMetaForType = (
         )
     ) {
         meta.isUnion = true;
+        meta.isObject = true;
 
         if (
             tsType.types.some((t) => t.isStringLiteral()) ||
@@ -1200,6 +1220,7 @@ export const gatherMetaForType = (
             meta.enumValues = enumValues;
 
             meta.isUnion = false;
+            meta.isObject = false;
             meta.possibleTypes = [];
         } else {
             let unionTypeIsList = 0;
@@ -1235,6 +1256,7 @@ export const gatherMetaForType = (
 
             if (unionTypeNeedsScalar) {
                 meta.isUnion = false;
+                meta.isObject = false;
                 meta.possibleTypes = [];
 
                 meta.isScalar = true;
@@ -1277,6 +1299,7 @@ export const gatherMetaForType = (
                 meta.name = singleType.name;
                 meta.tsType = singleType.tsType;
                 meta.isUnion = false;
+                meta.isObject = false;
                 meta.possibleTypes = [];
 
                 collector.addTypeReference(
@@ -1666,6 +1689,10 @@ export const gatherMetaForType = (
 
     if (meta.isScalar && meta.inputFields.length > 0) {
         meta.isScalar = false;
+    } else if (meta.isObject && meta.fields.length === 0 && !meta.isUnion) {
+        meta.isObject = false;
+        meta.isScalar = true;
+        meta.scalarTSTypeIsFinal = true;
     } else if (
         meta.isScalar ||
         meta.isObject ||

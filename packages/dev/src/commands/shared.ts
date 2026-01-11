@@ -5,6 +5,10 @@ import prettier from "prettier";
 import { Generator } from "@cobalt27/generate";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { GraphQLGenerator, Flavors } from "@samarium.sdk/make";
+import type {
+    OperationMeta,
+    TypeMeta,
+} from "@cobalt27/generate/src/collector/types";
 
 const cwd = process.cwd();
 
@@ -69,6 +73,12 @@ export const initializeAndCompile = async (
         port: number;
         operationFilesGlob?: string;
         typeFilesGlob?: string;
+        onFileCollected?: (
+            file: string,
+            meta: OperationMeta | TypeMeta,
+            fileType: "operation" | "type" | "union",
+        ) => Promise<void>;
+        $$typesSymbol?: string;
     },
     initCobaltAuthFn?: (authConfigFile: string) => Promise<void>,
     silent: boolean = false,
@@ -111,9 +121,6 @@ export const initializeAndCompile = async (
     let tries = 0;
     if (!ctxFile) {
         do {
-            console.log(
-                `Looking for ctx.ts in: ${path.join(ctxDir, "ctx.ts")}`,
-            );
             tries++;
             ctxDir = path.resolve(ctxDir, "..");
             searchCtxDirs.push(ctxDir);
@@ -157,6 +164,8 @@ export const initializeAndCompile = async (
         {
             operationFilesGlob: options.operationFilesGlob,
             typeFilesGlob: options.typeFilesGlob,
+            onFileCollected: options.onFileCollected,
+            $$typesSymbol: options.$$typesSymbol,
         },
     );
 
@@ -196,14 +205,23 @@ export const initializeAndCompile = async (
         await Bun.write(Bun.file(resolversPath), entrypoint);
     }
 
-    const writeTypesOut = async () => {
+    let writeTypesOut = async () => {
         for (const [fname, fcontent] of Object.entries(tsTypes)) {
             await Bun.write(
                 Bun.file(resolve(`./.cobalt/$$types/${fname}.ts`, false)!),
                 fcontent,
             );
         }
+        return resolve(`./.cobalt/$$types`, false)!;
     };
+    if (overrideWriteOuts?.writeTypesOut) {
+        writeTypesOut = async () => {
+            return await overrideWriteOuts.writeTypesOut!(
+                resolve(`./.cobalt/$$types`, false)!,
+                tsTypes,
+            );
+        };
+    }
 
     let gqlSchema;
     try {

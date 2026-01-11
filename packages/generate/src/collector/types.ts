@@ -1,6 +1,12 @@
 export type CodegenOptions = {
     operationFilesGlob?: string;
     typeFilesGlob?: string;
+    onFileCollected?: (
+        file: string,
+        meta: OperationMeta | TypeMeta,
+        fileType: "operation" | "type" | "union",
+    ) => Promise<void>;
+    $$typesSymbol?: string;
 };
 
 export interface SchemaMeta {

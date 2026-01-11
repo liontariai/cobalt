@@ -9,8 +9,8 @@
         "jsx": "react-jsx",
         "baseUrl": ".",
         "paths": {
-            "$$ctx": ["operations/ctx.ts"],
-            "$$types": ["operations/.$$types.ts"]
+            "$$ctx": ["tests/ctx.ts"],
+            "$$types": ["tests/.$$types.ts"]
         },
         "esModuleInterop": true,
         "verbatimModuleSyntax": true,
