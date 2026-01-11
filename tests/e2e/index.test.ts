@@ -22,7 +22,7 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
         process.exit(1);
     }
 
-    let { ctxFile, gqlSchema, writeSdkOut, writeSchemaOut } = await initializeAndCompile(
+    let { ctxFile, gqlSchema, writeSdkOut, writeSchemaOut, writeTypesOut } = await initializeAndCompile(
         {
             dir: path.join(dir, "operations"),
             port: 4000,
@@ -55,12 +55,38 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
                 return outpath;
             },
             writeResolversOut: async (outpath: string, entrypoint: string) => {
-                const tmpout = path.join(tmpdir(), crypto.randomUUID() + ".ts");
+                const outfile = path.join(
+                    ctxDir,
+                    ".resolvers",
+                    `${path
+                        .join(dir, options?.operationFilesGlob?.replaceAll("/**/", "").replaceAll("*.ts", "") ?? "")
+                        .replace("./", "")
+                        .replaceAll(path.sep, ".")}.resolvers.ts`.replaceAll("..", "."),
+                );
                 await Bun.write(
-                    Bun.file(tmpout),
+                    Bun.file(outfile),
                     entrypoint.replace('"@cobalt27/runtime"', `"${Bun.resolveSync("@cobalt27/runtime", process.cwd())}"`),
                 );
-                return tmpout;
+                return outfile;
+            },
+            writeTypesOut: async (outpath: string, tsTypes: Record<string, string>) => {
+                const basePath = path.join(
+                    ctxDir,
+                    ".types",
+                    `${path
+                        .join(dir, options?.operationFilesGlob?.replaceAll("/**/", "").replaceAll("*.ts", "") ?? "")
+                        .replace("./", "")
+                        .replaceAll(path.sep, ".")}.$$types`.replaceAll("..", "."),
+                );
+
+                for (const [fname, _fcontent] of Object.entries(tsTypes)) {
+                    let fcontent = _fcontent;
+                    if (fname === "index") {
+                        fcontent = `export namespace $$types { ${_fcontent} }`;
+                    }
+                    await Bun.write(Bun.file(path.join(basePath, `${fname}.ts`)), fcontent);
+                }
+                return basePath;
             },
         },
     );
@@ -76,6 +102,7 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
 
     await writeSdkOut();
     await writeSchemaOut();
+    await writeTypesOut();
 
     const configureSdkWithHandler = async (sdk: any) => {
         if (!sdk?.init) return sdk;
