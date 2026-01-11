@@ -1,4 +1,5 @@
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from "bun:test";
+import fs from "fs";
 import path from "path";
 import { tmpdir } from "os";
 import { initializeAndCompile } from "../../packages/dev/src/commands/shared";
@@ -36,6 +37,27 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
                     .replaceAll(path.sep, ".")}.ts`.replaceAll("..", "."),
             ),
             ...options,
+            $$typesSymbol: "$$types",
+            onFileCollected: async (file, meta, fileType) => {
+                const typesDir = path.join(
+                    ctxDir,
+                    ".types",
+                    `${path
+                        .join(dir, options?.operationFilesGlob?.replaceAll("/**/", "").replaceAll("*.ts", "") ?? "")
+                        .replace("./", "")
+                        .replaceAll(path.sep, ".")}.$$types`.replaceAll("..", "."),
+                );
+                const relativeTypesDir = path.relative(path.dirname(file), typesDir);
+
+                if (("type" in meta && meta.type.isUnion) || ("isUnion" in meta && meta.isUnion)) {
+                    const content = fs.readFileSync(file, "utf-8");
+                    let newContent = content;
+                    if (!content.includes(`import type { $$types } from "${relativeTypesDir}"`)) {
+                        newContent = `import type { $$types } from "${relativeTypesDir}";\n${content}`;
+                    }
+                    fs.writeFileSync(file, newContent);
+                }
+            },
         },
         undefined,
         true,
