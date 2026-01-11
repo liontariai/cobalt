@@ -144,19 +144,19 @@ export const gatherMeta = async (
         process.exit(1);
     }
 
-    const files = [
-        ...new Glob(
-            `${operationsDir}/${options.operationFilesGlob ?? "**/*.ts"}`,
-        ).scanSync(),
+    const operationFiles = new Glob(
+        `${operationsDir}/${options.operationFilesGlob ?? "**/*.ts"}`,
+    );
+    const files = [...operationFiles.scanSync()].filter(Boolean) as string[];
 
-        // the order is important, to have all types in the collector already
-        // and only extend them with additional field definitions
-        ...(fs.existsSync(typesDir)
-            ? new Glob(
-                  `${typesDir}/${options.typeFilesGlob ?? "**/*.ts"}`,
-              ).scanSync()
-            : []),
-    ].filter(Boolean) as string[];
+    const typeFiles = new Glob(
+        `${typesDir}/${options.typeFilesGlob ?? "**/*.ts"}`,
+    );
+    if (fs.existsSync(typesDir)) {
+        try {
+            files.push(...typeFiles.scanSync());
+        } catch (e) {}
+    }
 
     const notResolvableModules: {
         moduleName: string;
@@ -274,7 +274,7 @@ export const gatherMeta = async (
                 collector.removeType("RESOLVER!");
 
                 console.error(e);
-                console.log(`${resolverName} is not a valid resolver`);
+                console.error(`${resolverName} is not a valid resolver`);
                 continue;
             }
 
