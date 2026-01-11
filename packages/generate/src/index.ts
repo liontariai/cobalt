@@ -118,7 +118,12 @@ export class Generator {
         return typesFiles;
     }
 
-    private syncResolveTypeFunctions(schemaMeta: SchemaMeta) {
+    private syncUnionOperationResolveTypeFunctions(
+        schemaMeta: SchemaMeta,
+        options: { $$typesSymbol?: string } = {},
+    ) {
+        const $$typesSymbol = options.$$typesSymbol ?? 'import("$$types")';
+
         for (const operation of schemaMeta.operations) {
             if (
                 operation.type.isUnion &&
@@ -134,9 +139,9 @@ export class Generator {
                 // Handle regular, async, and async generator functions
                 const operationName = operation.operation;
                 const patterns = [
-                    `export async function* ${operationName}($$$ARGS): $$$RET { $$$BODY }`,
-                    `export async function ${operationName}($$$ARGS): $$$RET { $$$BODY }`,
-                    `export function ${operationName}($$$ARGS): $$$RET { $$$BODY }`,
+                    `export async function* ${operationName}($$$ARGS)$$$RET { $$$BODY }`,
+                    `export async function ${operationName}($$$ARGS)$$$RET { $$$BODY }`,
+                    `export function ${operationName}($$$ARGS)$$$RET { $$$BODY }`,
                 ];
 
                 const operationFunctionMatch = patterns
@@ -146,7 +151,8 @@ export class Generator {
 
                 // Find if resolveType already exists for this operation
                 // Search for any .resolveType assignment and check if it matches our operation
-                const resolveTypePattern = `$OP.resolveType = $$$ASSIGNMENT`;
+                const resolveTypePattern =
+                    "$OP.resolveType = ($PARAMS): $RET => $BODY";
                 const allResolveTypeMatches = root.findAll(resolveTypePattern);
                 const resolveTypeMatch =
                     allResolveTypeMatches.find((match) => {
@@ -158,7 +164,7 @@ export class Generator {
                     "",
                     "// Your resolver returns a Union Type. Therefore you must provide a resolveType function that resolves the abstract union type to a concrete type by it's typename.",
                     "// The following fully-typed template has been added by cobalt. Please make sure it resolves correctly, like the types indicate.",
-                    `${operation.operation}.resolveType = (value: import("$$types").Unions["${pureOpTypeName}"]): import("$$types").UnionsResolveToTypename["${pureOpTypeName}"] => {`,
+                    `${operation.operation}.resolveType = (value: ${$$typesSymbol}.Unions["${pureOpTypeName}"]): ${$$typesSymbol}.UnionsResolveToTypename["${pureOpTypeName}"] => {`,
                     `    switch(value){`,
                     `        default:`,
                     `            return "";`,
@@ -169,59 +175,28 @@ export class Generator {
                 let newCode: string;
 
                 if (resolveTypeMatch) {
-                    // Update existing resolveType function signature
-                    const resolveTypeNode = resolveTypeMatch;
-                    const updatedResolveType = `${operation.operation}.resolveType = (value: import("$$types").Unions["${pureOpTypeName}"]): import("$$types").UnionsResolveToTypename["${pureOpTypeName}"] => {`;
+                    const args =
+                        resolveTypeMatch.getMatch("PARAMS")?.text() || "";
 
-                    // Extract the function body from the existing resolveType
-                    const assignmentMatch =
-                        resolveTypeNode.getMatch("$$$ASSIGNMENT");
-                    if (assignmentMatch) {
-                        // Try to extract the body from arrow function
-                        const arrowFunctionPattern = `($$$PARAMS) => { $$$BODY }`;
-                        const arrowMatch =
-                            assignmentMatch.find(arrowFunctionPattern);
-                        if (arrowMatch) {
-                            const body =
-                                arrowMatch.getMatch("$$$BODY")?.text() || "";
-                            const updatedResolveTypeWithBody = `${updatedResolveType}\n${body}}`;
-                            const range = resolveTypeNode.range();
-                            newCode =
-                                code.slice(0, range.start.index) +
-                                updatedResolveTypeWithBody +
-                                code.slice(range.end.index);
-                        } else {
-                            // Fallback: replace with new signature and default body
-                            const range = resolveTypeNode.range();
-                            newCode =
-                                code.slice(0, range.start.index) +
-                                updatedResolveType +
-                                [
-                                    "",
-                                    `    switch(value){`,
-                                    `        default:`,
-                                    `            return "";`,
-                                    `    }`,
-                                    `};`,
-                                ].join("\n") +
-                                code.slice(range.end.index);
-                        }
-                    } else {
-                        // Fallback: replace the entire assignment
-                        const range = resolveTypeNode.range();
-                        newCode =
-                            code.slice(0, range.start.index) +
-                            updatedResolveType +
-                            [
-                                "",
-                                `    switch(value){`,
-                                `        default:`,
-                                `            return "";`,
-                                `    }`,
-                                `};`,
-                            ].join("\n") +
-                            code.slice(range.end.index);
-                    }
+                    const regexUnionTypeImport = new RegExp(
+                        `${RegExp.escape($$typesSymbol)}\.Unions\\[(.*)\\]`,
+                    );
+
+                    const oldTypenameMatch =
+                        regexUnionTypeImport.exec(args)?.[1];
+                    const updatedResolveTypeWithBody = oldTypenameMatch
+                        ? resolveTypeMatch
+                              .text()
+                              .replaceAll(
+                                  oldTypenameMatch.slice(1, -1),
+                                  pureOpTypeName,
+                              )
+                        : resolveTypeMatch.text();
+                    const range = resolveTypeMatch.range();
+                    newCode =
+                        code.slice(0, range.start.index) +
+                        updatedResolveTypeWithBody +
+                        code.slice(range.end.index);
                 } else {
                     // Insert resolveType right after the operation function
                     const range = operationFunctionMatch.range();
@@ -246,7 +221,9 @@ export class Generator {
         const schemaMeta = await gatherMeta(operationsDir, options, collector);
 
         const typesFiles = this.generateTSTypesFile(schemaMeta);
-        this.syncResolveTypeFunctions(schemaMeta);
+        this.syncUnionOperationResolveTypeFunctions(schemaMeta, {
+            $$typesSymbol: options.$$typesSymbol ?? 'import("$$types")',
+        });
 
         const schema = new GeneratorSchemaGQL(schemaMeta).generateSchema();
 
