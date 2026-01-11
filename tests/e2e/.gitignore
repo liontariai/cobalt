@@ -1,2 +1,4 @@
+.resolvers
 .sdks
 .schemas
+.types
