@@ -1082,6 +1082,7 @@ export const gatherMetaForType = (
         )
     ) {
         meta.isUnion = true;
+        meta.isObject = true;
 
         if (
             tsType.types.some((t) => t.isStringLiteral()) ||
@@ -1219,6 +1220,7 @@ export const gatherMetaForType = (
             meta.enumValues = enumValues;
 
             meta.isUnion = false;
+            meta.isObject = false;
             meta.possibleTypes = [];
         } else {
             let unionTypeIsList = 0;
@@ -1254,6 +1256,7 @@ export const gatherMetaForType = (
 
             if (unionTypeNeedsScalar) {
                 meta.isUnion = false;
+                meta.isObject = false;
                 meta.possibleTypes = [];
 
                 meta.isScalar = true;
@@ -1296,6 +1299,7 @@ export const gatherMetaForType = (
                 meta.name = singleType.name;
                 meta.tsType = singleType.tsType;
                 meta.isUnion = false;
+                meta.isObject = false;
                 meta.possibleTypes = [];
 
                 collector.addTypeReference(
@@ -1685,7 +1689,7 @@ export const gatherMetaForType = (
 
     if (meta.isScalar && meta.inputFields.length > 0) {
         meta.isScalar = false;
-    } else if (meta.isObject && meta.fields.length === 0) {
+    } else if (meta.isObject && meta.fields.length === 0 && !meta.isUnion) {
         meta.isObject = false;
         meta.isScalar = true;
         meta.scalarTSTypeIsFinal = true;
