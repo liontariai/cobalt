@@ -208,14 +208,23 @@ export const initializeAndCompile = async (
         await Bun.write(Bun.file(resolversPath), entrypoint);
     }
 
-    const writeTypesOut = async () => {
+    let writeTypesOut = async () => {
         for (const [fname, fcontent] of Object.entries(tsTypes)) {
             await Bun.write(
                 Bun.file(resolve(`./.cobalt/$$types/${fname}.ts`, false)!),
                 fcontent,
             );
         }
+        return resolve(`./.cobalt/$$types`, false)!;
     };
+    if (overrideWriteOuts?.writeTypesOut) {
+        writeTypesOut = async () => {
+            return await overrideWriteOuts.writeTypesOut!(
+                resolve(`./.cobalt/$$types`, false)!,
+                tsTypes,
+            );
+        };
+    }
 
     let gqlSchema;
     try {
