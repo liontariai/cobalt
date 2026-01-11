@@ -1,4 +1,5 @@
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from "bun:test";
+import fs from "fs";
 import path from "path";
 import { tmpdir } from "os";
 import { initializeAndCompile } from "../../packages/dev/src/commands/shared";
@@ -22,9 +23,9 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
         process.exit(1);
     }
 
-    let { ctxFile, gqlSchema, writeSdkOut, writeSchemaOut } = await initializeAndCompile(
+    let { ctxFile, gqlSchema, writeSdkOut, writeSchemaOut, writeTypesOut } = await initializeAndCompile(
         {
-            dir,
+            dir: path.join(dir, "operations"),
             port: 4000,
             pretty: true,
             sdkOut: path.join(
@@ -36,6 +37,27 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
                     .replaceAll(path.sep, ".")}.ts`.replaceAll("..", "."),
             ),
             ...options,
+            $$typesSymbol: "$$types",
+            onFileCollected: async (file, meta, fileType) => {
+                const typesDir = path.join(
+                    ctxDir,
+                    ".types",
+                    `${path
+                        .join(dir, options?.operationFilesGlob?.replaceAll("/**/", "").replaceAll("*.ts", "") ?? "")
+                        .replace("./", "")
+                        .replaceAll(path.sep, ".")}.$$types`.replaceAll("..", "."),
+                );
+                const relativeTypesDir = path.relative(path.dirname(file), typesDir);
+
+                if (("type" in meta && meta.type.isUnion) || ("isUnion" in meta && meta.isUnion)) {
+                    const content = fs.readFileSync(file, "utf-8");
+                    let newContent = content;
+                    if (!content.includes(`import type { $$types } from "${relativeTypesDir}"`)) {
+                        newContent = `import type { $$types } from "${relativeTypesDir}";\n${content}`;
+                    }
+                    fs.writeFileSync(file, newContent);
+                }
+            },
         },
         undefined,
         true,
@@ -55,12 +77,38 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
                 return outpath;
             },
             writeResolversOut: async (outpath: string, entrypoint: string) => {
-                const tmpout = path.join(tmpdir(), crypto.randomUUID() + ".ts");
+                const outfile = path.join(
+                    ctxDir,
+                    ".resolvers",
+                    `${path
+                        .join(dir, options?.operationFilesGlob?.replaceAll("/**/", "").replaceAll("*.ts", "") ?? "")
+                        .replace("./", "")
+                        .replaceAll(path.sep, ".")}.resolvers.ts`.replaceAll("..", "."),
+                );
                 await Bun.write(
-                    Bun.file(tmpout),
+                    Bun.file(outfile),
                     entrypoint.replace('"@cobalt27/runtime"', `"${Bun.resolveSync("@cobalt27/runtime", process.cwd())}"`),
                 );
-                return tmpout;
+                return outfile;
+            },
+            writeTypesOut: async (outpath: string, tsTypes: Record<string, string>) => {
+                const basePath = path.join(
+                    ctxDir,
+                    ".types",
+                    `${path
+                        .join(dir, options?.operationFilesGlob?.replaceAll("/**/", "").replaceAll("*.ts", "") ?? "")
+                        .replace("./", "")
+                        .replaceAll(path.sep, ".")}.$$types`.replaceAll("..", "."),
+                );
+
+                for (const [fname, _fcontent] of Object.entries(tsTypes)) {
+                    let fcontent = _fcontent;
+                    if (fname === "index") {
+                        fcontent = `export namespace $$types { ${_fcontent} }`;
+                    }
+                    await Bun.write(Bun.file(path.join(basePath, `${fname}.ts`)), fcontent);
+                }
+                return basePath;
             },
         },
     );
@@ -76,6 +124,7 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
 
     await writeSdkOut();
     await writeSchemaOut();
+    await writeTypesOut();
 
     const configureSdkWithHandler = async (sdk: any) => {
         if (!sdk?.init) return sdk;
@@ -112,9 +161,9 @@ describe("E2E", () => {
     describe("Scalars", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.scalars.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/scalars", {
+                    await makeHandlerFromDir("./tests/scalars", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -132,9 +181,9 @@ describe("E2E", () => {
                 expect(bool).toBe(true);
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.scalars.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.scalars.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/scalars", {
+                    await makeHandlerFromDir("./tests/scalars", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -156,9 +205,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.scalars.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/scalars", {
+                        await makeHandlerFromDir("./tests/scalars", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -176,9 +225,9 @@ describe("E2E", () => {
                     expect(await bool()).toBe(true);
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.scalars.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.scalars.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/scalars", {
+                        await makeHandlerFromDir("./tests/scalars", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -202,9 +251,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.scalars.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.scalars.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/scalars", {
+                    await makeHandlerFromDir("./tests/scalars", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -227,9 +276,9 @@ describe("E2E", () => {
                 expect(mixed.boolean).toBe(true);
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.scalars.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.scalars.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/scalars", {
+                    await makeHandlerFromDir("./tests/scalars", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -253,9 +302,9 @@ describe("E2E", () => {
             });
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.scalars.in-obj").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.scalars.in-obj").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/scalars", {
+                        await makeHandlerFromDir("./tests/scalars", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -281,9 +330,9 @@ describe("E2E", () => {
                     expect(resMixed.boolean).toBe(true);
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.scalars.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.scalars.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/scalars", {
+                        await makeHandlerFromDir("./tests/scalars", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })
@@ -320,9 +369,9 @@ describe("E2E", () => {
     describe("Lists of Scalars", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.lists.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.lists.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/lists", {
+                    await makeHandlerFromDir("./tests/lists", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -340,9 +389,9 @@ describe("E2E", () => {
                 expect(bool).toEqual([true, false, true]);
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.lists.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.lists.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/lists", {
+                    await makeHandlerFromDir("./tests/lists", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -360,9 +409,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.scalars.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.scalars.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/scalars", {
+                        await makeHandlerFromDir("./tests/scalars", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -380,9 +429,9 @@ describe("E2E", () => {
                     expect(await bool()).toBe(true);
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.lists.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.lists.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/lists", {
+                        await makeHandlerFromDir("./tests/lists", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -402,9 +451,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.lists.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.lists.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/lists", {
+                    await makeHandlerFromDir("./tests/lists", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -422,9 +471,9 @@ describe("E2E", () => {
                 expect(bool.booleans).toEqual([true, false, true]);
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.lists.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.lists.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/lists", {
+                    await makeHandlerFromDir("./tests/lists", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -439,9 +488,9 @@ describe("E2E", () => {
             });
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.lists.in-obj").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.lists.in-obj").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/lists", {
+                        await makeHandlerFromDir("./tests/lists", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -459,9 +508,9 @@ describe("E2E", () => {
                     expect(await bool()).toEqual({ booleans: [true, false, true] });
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.lists.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.lists.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/lists", {
+                        await makeHandlerFromDir("./tests/lists", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })
@@ -480,149 +529,331 @@ describe("E2E", () => {
     });
 
     describe("Unions", () => {
-        describe("Root fields", () => {
-            test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.unions.root").catch(console.error))?.default;
-                (
-                    await makeHandlerFromDir("./operations/unions", {
-                        operationFilesGlob: "root/*.ts",
-                        typeFilesGlob: "root/*.ts",
-                    })
-                )(_sdk);
-                if (!_sdk) return;
-
-                const sdk = _sdk;
-
-                const simple = await sdk.query.rootSimple;
-
-                expect(simple).toBe("Hello, World!");
-            });
-            test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.unions.root.with-args").catch(console.error))?.default;
-                (
-                    await makeHandlerFromDir("./operations/unions", {
-                        operationFilesGlob: "root/with-args/*.ts",
-                        typeFilesGlob: "root/with-args/*.ts",
-                    })
-                )(_sdk);
-                if (!_sdk) return;
-
-                const sdk = _sdk;
-
-                const stringResult = await sdk.query.rootWithArgsSimple({ arg: "Hello" });
-                const numberResult = await sdk.query.rootWithArgsSimple({ arg: 42 });
-
-                expect(stringResult).toBe("Hello");
-                expect(numberResult).toBe(42);
-            });
-
-            describe("with $lazy", () => {
+        describe("Custom Scalar Unions", () => {
+            describe("Root fields", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.unions.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/unions", {
-                            operationFilesGlob: "root/*.ts",
-                            typeFilesGlob: "root/*.ts",
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "custom-scalar/root/*.ts",
+                            typeFilesGlob: "custom-scalar/root/*.ts",
                         })
                     )(_sdk);
                     if (!_sdk) return;
 
                     const sdk = _sdk;
 
-                    const simple = sdk.query.rootSimple.$lazy;
+                    const simple = await sdk.query.customScalarRootSimple;
 
-                    expect(await simple()).toBe("Hello, World!");
+                    expect(simple).toBe("Hello, World!");
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.unions.root.with-args").catch(console.error);
+                    const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.root.with-args").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/unions", {
-                            operationFilesGlob: "root/with-args/*.ts",
-                            typeFilesGlob: "root/with-args/*.ts",
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "custom-scalar/root/with-args/*.ts",
+                            typeFilesGlob: "custom-scalar/root/with-args/*.ts",
                         })
-                    )(_sdk?.default);
+                    )(_sdk);
                     if (!_sdk) return;
 
-                    const sdk = _sdk.default;
-                    const _ = _sdk._;
+                    const sdk = _sdk;
 
-                    const simple = sdk.query.rootWithArgsSimple({ arg: _ }).$lazy;
+                    const stringResult = await sdk.query.customScalarRootWithArgsSimple({ arg: "Hello" });
+                    const numberResult = await sdk.query.customScalarRootWithArgsSimple({ arg: 42 });
 
-                    expect(await simple({ arg: "Hello" })).toBe("Hello");
-                    expect(await simple({ arg: 42 })).toBe(42);
+                    expect(stringResult).toBe("Hello");
+                    expect(numberResult).toBe(42);
+                });
+
+                describe("with $lazy", () => {
+                    test("No args", async () => {
+                        const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.root").catch(console.error))?.default;
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "custom-scalar/root/*.ts",
+                                typeFilesGlob: "custom-scalar/root/*.ts",
+                            })
+                        )(_sdk);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk;
+
+                        const simple = sdk.query.customScalarRootSimple.$lazy;
+
+                        expect(await simple()).toBe("Hello, World!");
+                    });
+                    test("With args", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.custom-scalar.root.with-args").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "custom-scalar/root/with-args/*.ts",
+                                typeFilesGlob: "custom-scalar/root/with-args/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const simple = sdk.query.customScalarRootWithArgsSimple({ arg: _ }).$lazy;
+
+                        expect(await simple({ arg: "Hello" })).toBe("Hello");
+                        expect(await simple({ arg: 42 })).toBe(42);
+                    });
+                });
+            });
+            describe("In objects", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.in-obj").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "custom-scalar/in-obj/*.ts",
+                            typeFilesGlob: "custom-scalar/in-obj/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const simple = await sdk.query.customScalarInObjSimple();
+
+                    expect(simple.value).toBe("Hello, World!");
+                });
+                test("With args", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.in-obj.with-args").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "custom-scalar/in-obj/with-args/*.ts",
+                            typeFilesGlob: "custom-scalar/in-obj/with-args/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const stringResult = await sdk.query.customScalarInObjWithArgsSimple({ arg: "Hello" })();
+                    const numberResult = await sdk.query.customScalarInObjWithArgsSimple({ arg: 42 })();
+
+                    expect(stringResult.value).toBe("Hello");
+                    expect(numberResult.value).toBe(42);
+                });
+                describe("with $lazy", () => {
+                    test("No args", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.custom-scalar.in-obj").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "custom-scalar/in-obj/*.ts",
+                                typeFilesGlob: "custom-scalar/in-obj/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const simple = sdk.query.customScalarInObjSimple().$lazy;
+
+                        expect((await simple()).value).toBe("Hello, World!");
+                    });
+                    test("With args", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.custom-scalar.in-obj.with-args").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "custom-scalar/in-obj/with-args/*.ts",
+                                typeFilesGlob: "custom-scalar/in-obj/with-args/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const simple = sdk.query.customScalarInObjWithArgsSimple({ arg: _ })().$lazy;
+
+                        expect((await simple({ arg: "Hello" })).value).toBe("Hello");
+                        expect((await simple({ arg: 42 })).value).toBe(42);
+                    });
                 });
             });
         });
-        describe("In objects", () => {
-            test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.unions.in-obj").catch(console.error))?.default;
-                (
-                    await makeHandlerFromDir("./operations/unions", {
-                        operationFilesGlob: "in-obj/*.ts",
-                        typeFilesGlob: "in-obj/*.ts",
-                    })
-                )(_sdk);
-                if (!_sdk) return;
-
-                const sdk = _sdk;
-
-                const simple = await sdk.query.inObjSimple();
-
-                expect(simple.value).toBe("Hello, World!");
-            });
-            test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.unions.in-obj.with-args").catch(console.error))?.default;
-                (
-                    await makeHandlerFromDir("./operations/unions", {
-                        operationFilesGlob: "in-obj/with-args/*.ts",
-                        typeFilesGlob: "in-obj/with-args/*.ts",
-                    })
-                )(_sdk);
-                if (!_sdk) return;
-
-                const sdk = _sdk;
-
-                const stringResult = await sdk.query.inObjWithArgsSimple({ arg: "Hello" })();
-                const numberResult = await sdk.query.inObjWithArgsSimple({ arg: 42 })();
-
-                expect(stringResult.value).toBe("Hello");
-                expect(numberResult.value).toBe(42);
-            });
-            describe("with $lazy", () => {
+        describe("GraphQL Unions", () => {
+            describe("Root fields", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.unions.in-obj").catch(console.error);
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/unions", {
-                            operationFilesGlob: "in-obj/*.ts",
-                            typeFilesGlob: "in-obj/*.ts",
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/root/*.ts",
+                            typeFilesGlob: "gql-unions/root/*.ts",
                         })
-                    )(_sdk?.default);
+                    )(_sdk);
                     if (!_sdk) return;
 
-                    const sdk = _sdk.default;
-                    const _ = _sdk._;
+                    const sdk = _sdk;
 
-                    const simple = sdk.query.inObjSimple().$lazy;
+                    const simple = await sdk.query.gqlUnionsRootSimple(({ $on }) => ({
+                        ...$on._title_string_description_string_((s) => ({ ...s.$all({}) })),
+                    }));
 
-                    expect((await simple()).value).toBe("Hello, World!");
+                    expect(simple).toEqual({ title: "Hello, World!", description: "This is a test" });
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.unions.in-obj.with-args").catch(console.error);
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root.with-args").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/unions", {
-                            operationFilesGlob: "in-obj/with-args/*.ts",
-                            typeFilesGlob: "in-obj/with-args/*.ts",
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/root/with-args/*.ts",
+                            typeFilesGlob: "gql-unions/root/with-args/*.ts",
                         })
-                    )(_sdk?.default);
+                    )(_sdk);
                     if (!_sdk) return;
 
-                    const sdk = _sdk.default;
-                    const _ = _sdk._;
+                    const sdk = _sdk;
 
-                    const simple = sdk.query.inObjWithArgsSimple({ arg: _ })().$lazy;
+                    const urlResult = await sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: true })(({ $on }) => ({ ...$on._url_string_() }));
+                    const titleResult = await sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: false })(({ $on }) => ({
+                        ...$on._title_string_description_string_(),
+                    }));
 
-                    expect((await simple({ arg: "Hello" })).value).toBe("Hello");
-                    expect((await simple({ arg: 42 })).value).toBe(42);
+                    expect(urlResult).toEqual({ url: "https://www.google.com" });
+                    expect(titleResult).toEqual({ title: "Hello, World!", description: "This is a test" });
+                });
+
+                describe("with $lazy", () => {
+                    test("No args", async () => {
+                        const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root").catch(console.error))?.default;
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/root/*.ts",
+                                typeFilesGlob: "gql-unions/root/*.ts",
+                            })
+                        )(_sdk);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk;
+
+                        const simple = sdk.query.gqlUnionsRootSimple(({ $on }) => ({
+                            ...$on._title_string_description_string_((s) => ({ ...s.$all({}) })),
+                        })).$lazy;
+
+                        expect(await simple()).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+                    test("With args", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.root.with-args").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/root/with-args/*.ts",
+                                typeFilesGlob: "gql-unions/root/with-args/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const urlResult = sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: _ })(({ $on }) => ({ ...$on._url_string_() })).$lazy;
+                        const titleResult = sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            ...$on._title_string_description_string_(),
+                        })).$lazy;
+
+                        expect(await urlResult({ returnUrl: true })).toEqual({ url: "https://www.google.com" });
+                        expect(await titleResult({ returnUrl: false })).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+                });
+            });
+            describe("In objects", () => {
+                test("No args", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.in-obj").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/in-obj/*.ts",
+                            typeFilesGlob: "gql-unions/in-obj/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const titleResult = await sdk.query.gqlUnionsInObjSimple(({ value }) => ({
+                        value: value(({ $on }) => ({
+                            ...$on._title_string_description_string_(({ title, description }) => ({ title, description })),
+                        })),
+                    }));
+
+                    expect(titleResult).toEqual({ value: { title: "Hello, World!", description: "This is a test" } });
+                });
+                test("With args", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                            typeFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const urlResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: true })(({ $on }) => ({
+                        ...$on._value_url_string_title_undefined_description_undefined_(({ value }) => ({ value: value(({ url }) => ({ url })) })),
+                    }));
+                    const titleResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: false })(({ $on }) => ({
+                        ...$on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                            value: value(({ title, description }) => ({ title, description })),
+                        })),
+                    }));
+
+                    expect(urlResult).toEqual({ value: { url: "https://www.google.com" } });
+                    expect(titleResult).toEqual({ value: { title: "Hello, World!", description: "This is a test" } });
+                });
+                describe("with $lazy", () => {
+                    test("No args", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.in-obj").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/in-obj/*.ts",
+                                typeFilesGlob: "gql-unions/in-obj/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const titleResult = sdk.query.gqlUnionsInObjSimple(({ value }) => ({
+                            value: value(({ $on }) => ({
+                                ...$on._title_string_description_string_(({ title, description }) => ({ title, description })),
+                            })),
+                        })).$lazy;
+
+                        expect((await titleResult()).value).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+                    test("With args", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                                typeFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const urlResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            ...$on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                                value: value(({ url }) => ({ url })),
+                            })),
+                        })).$lazy;
+                        const titleResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            ...$on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                                value: value(({ title, description }) => ({ title, description })),
+                            })),
+                        })).$lazy;
+
+                        expect((await urlResult({ returnUrl: true })).value).toEqual({ url: "https://www.google.com" });
+                        expect((await titleResult({ returnUrl: false })).value).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
                 });
             });
         });
@@ -631,9 +862,9 @@ describe("E2E", () => {
     describe("Enums", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.enums.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.enums.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/enums", {
+                    await makeHandlerFromDir("./tests/enums", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -647,9 +878,9 @@ describe("E2E", () => {
                 expect(simple).toBe("RED");
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.enums.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.enums.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/enums", {
+                    await makeHandlerFromDir("./tests/enums", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -669,9 +900,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.enums.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.enums.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/enums", {
+                        await makeHandlerFromDir("./tests/enums", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -685,9 +916,9 @@ describe("E2E", () => {
                     expect(await simple()).toBe("RED");
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.enums.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.enums.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/enums", {
+                        await makeHandlerFromDir("./tests/enums", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -707,9 +938,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.enums.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.enums.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/enums", {
+                    await makeHandlerFromDir("./tests/enums", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -723,9 +954,9 @@ describe("E2E", () => {
                 expect(simple.color).toBe("RED");
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.enums.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.enums.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/enums", {
+                    await makeHandlerFromDir("./tests/enums", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -742,9 +973,9 @@ describe("E2E", () => {
             });
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.enums.in-obj").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.enums.in-obj").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/enums", {
+                        await makeHandlerFromDir("./tests/enums", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -759,9 +990,9 @@ describe("E2E", () => {
                     expect((await simple()).color).toBe("RED");
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.enums.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.enums.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/enums", {
+                        await makeHandlerFromDir("./tests/enums", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })
@@ -783,9 +1014,9 @@ describe("E2E", () => {
     describe("Mutations", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.mutations.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.mutations.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/mutations", {
+                    await makeHandlerFromDir("./tests/mutations", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -800,9 +1031,9 @@ describe("E2E", () => {
             });
 
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.mutations.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.mutations.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/mutations", {
+                    await makeHandlerFromDir("./tests/mutations", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -820,9 +1051,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.mutations.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.mutations.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/mutations", {
+                        await makeHandlerFromDir("./tests/mutations", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -837,9 +1068,9 @@ describe("E2E", () => {
                 });
 
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.mutations.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.mutations.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/mutations", {
+                        await makeHandlerFromDir("./tests/mutations", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -859,9 +1090,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.mutations.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.mutations.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/mutations", {
+                    await makeHandlerFromDir("./tests/mutations", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -878,9 +1109,9 @@ describe("E2E", () => {
             });
             describe("with $lazy", () => {
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.mutations.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.mutations.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/mutations", {
+                        await makeHandlerFromDir("./tests/mutations", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })
@@ -903,9 +1134,9 @@ describe("E2E", () => {
     describe("Subscriptions", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.subscriptions.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.subscriptions.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/subscriptions", {
+                    await makeHandlerFromDir("./tests/subscriptions", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -923,9 +1154,9 @@ describe("E2E", () => {
             });
 
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.subscriptions.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.subscriptions.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/subscriptions", {
+                    await makeHandlerFromDir("./tests/subscriptions", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -944,9 +1175,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.subscriptions.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.subscriptions.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/subscriptions", {
+                        await makeHandlerFromDir("./tests/subscriptions", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -966,9 +1197,9 @@ describe("E2E", () => {
                 });
 
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.subscriptions.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.subscriptions.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/subscriptions", {
+                        await makeHandlerFromDir("./tests/subscriptions", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -991,9 +1222,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.subscriptions.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/subscriptions", {
+                    await makeHandlerFromDir("./tests/subscriptions", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -1011,9 +1242,9 @@ describe("E2E", () => {
             });
 
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.subscriptions.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/subscriptions", {
+                    await makeHandlerFromDir("./tests/subscriptions", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -1031,9 +1262,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.subscriptions.in-obj").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.subscriptions.in-obj").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/subscriptions", {
+                        await makeHandlerFromDir("./tests/subscriptions", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -1053,9 +1284,9 @@ describe("E2E", () => {
                 });
 
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.subscriptions.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.subscriptions.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/subscriptions", {
+                        await makeHandlerFromDir("./tests/subscriptions", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })
@@ -1081,9 +1312,9 @@ describe("E2E", () => {
     describe("Nested", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.nested.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.nested.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/nested", {
+                    await makeHandlerFromDir("./tests/nested", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -1099,9 +1330,9 @@ describe("E2E", () => {
                 expect(simple.user.address.city).toBe("New York");
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.nested.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.nested.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/nested", {
+                    await makeHandlerFromDir("./tests/nested", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -1121,9 +1352,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.nested.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.nested.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/nested", {
+                        await makeHandlerFromDir("./tests/nested", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -1140,9 +1371,9 @@ describe("E2E", () => {
                     expect(result.user.address.city).toBe("New York");
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.nested.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.nested.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/nested", {
+                        await makeHandlerFromDir("./tests/nested", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -1165,9 +1396,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.nested.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.nested.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/nested", {
+                    await makeHandlerFromDir("./tests/nested", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -1183,9 +1414,9 @@ describe("E2E", () => {
                 expect(simple.data.user.address.city).toBe("New York");
             });
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.nested.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.nested.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/nested", {
+                    await makeHandlerFromDir("./tests/nested", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -1204,9 +1435,9 @@ describe("E2E", () => {
             });
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.nested.in-obj").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.nested.in-obj").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/nested", {
+                        await makeHandlerFromDir("./tests/nested", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -1224,9 +1455,9 @@ describe("E2E", () => {
                     expect(result.data.user.address.city).toBe("New York");
                 });
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.nested.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.nested.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/nested", {
+                        await makeHandlerFromDir("./tests/nested", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })
@@ -1252,9 +1483,9 @@ describe("E2E", () => {
     describe("Nullable", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.nullable.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.nullable.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/nullable", {
+                    await makeHandlerFromDir("./tests/nullable", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -1270,9 +1501,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./operations/.sdks/operations.nullable.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.nullable.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./operations/nullable", {
+                        await makeHandlerFromDir("./tests/nullable", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -1289,9 +1520,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.nullable.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.nullable.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/nullable", {
+                    await makeHandlerFromDir("./tests/nullable", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -1307,9 +1538,9 @@ describe("E2E", () => {
             });
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.nullable.in-obj").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.nullable.in-obj").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/nullable", {
+                        await makeHandlerFromDir("./tests/nullable", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -1332,9 +1563,9 @@ describe("E2E", () => {
     describe("Complex", () => {
         describe("Root fields", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.complex.root").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.complex.root").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/complex", {
+                    await makeHandlerFromDir("./tests/complex", {
                         operationFilesGlob: "root/*.ts",
                         typeFilesGlob: "root/*.ts",
                     })
@@ -1352,9 +1583,9 @@ describe("E2E", () => {
             });
 
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.complex.root.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.complex.root.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/complex", {
+                    await makeHandlerFromDir("./tests/complex", {
                         operationFilesGlob: "root/with-args/*.ts",
                         typeFilesGlob: "root/with-args/*.ts",
                     })
@@ -1378,9 +1609,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.complex.root").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.complex.root").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/complex", {
+                        await makeHandlerFromDir("./tests/complex", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -1400,9 +1631,9 @@ describe("E2E", () => {
                 });
 
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.complex.root.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.complex.root.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/complex", {
+                        await makeHandlerFromDir("./tests/complex", {
                             operationFilesGlob: "root/with-args/*.ts",
                             typeFilesGlob: "root/with-args/*.ts",
                         })
@@ -1429,9 +1660,9 @@ describe("E2E", () => {
         });
         describe("In objects", () => {
             test("No args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.complex.in-obj").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.complex.in-obj").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/complex", {
+                    await makeHandlerFromDir("./tests/complex", {
                         operationFilesGlob: "in-obj/*.ts",
                         typeFilesGlob: "in-obj/*.ts",
                     })
@@ -1449,9 +1680,9 @@ describe("E2E", () => {
             });
 
             test("With args", async () => {
-                const _sdk = (await import("./operations/.sdks/operations.complex.in-obj.with-args").catch(console.error))?.default;
+                const _sdk = (await import("./tests/.sdks/tests.complex.in-obj.with-args").catch(console.error))?.default;
                 (
-                    await makeHandlerFromDir("./operations/complex", {
+                    await makeHandlerFromDir("./tests/complex", {
                         operationFilesGlob: "in-obj/with-args/*.ts",
                         typeFilesGlob: "in-obj/with-args/*.ts",
                     })
@@ -1474,9 +1705,9 @@ describe("E2E", () => {
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.complex.in-obj").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.complex.in-obj").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/complex", {
+                        await makeHandlerFromDir("./tests/complex", {
                             operationFilesGlob: "in-obj/*.ts",
                             typeFilesGlob: "in-obj/*.ts",
                         })
@@ -1496,9 +1727,9 @@ describe("E2E", () => {
                 });
 
                 test("With args", async () => {
-                    const _sdk = await import("./operations/.sdks/operations.complex.in-obj.with-args").catch(console.error);
+                    const _sdk = await import("./tests/.sdks/tests.complex.in-obj.with-args").catch(console.error);
                     (
-                        await makeHandlerFromDir("./operations/complex", {
+                        await makeHandlerFromDir("./tests/complex", {
                             operationFilesGlob: "in-obj/with-args/*.ts",
                             typeFilesGlob: "in-obj/with-args/*.ts",
                         })

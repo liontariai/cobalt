@@ -38,7 +38,7 @@ export class GeneratorSchemaGQL {
                 );
             }
         }
-        return scalars.join("\n");
+        return scalars.filter((v, i, arr) => i === arr.indexOf(v)).join("\n");
     }
 
     public makeEnumTypes(): string {
@@ -82,7 +82,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
             return "";
         }
 
-        let name = typeMeta.name;
+        let name = typeMeta.name.replaceAll("!", "");
         name = typeMeta.isList
             ? name.replaceAll("[", "").replaceAll("]", "")
             : name;
@@ -159,9 +159,11 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                 name = name.replaceAll("!", "");
 
                 if (typeMeta.fields.length === 0) {
-                    console.warn(
-                        `[makeObjectTypes]: Type "${name}" as zero fields. Skipping in output GQL schema.`,
-                    );
+                    if (!typeMeta.isUnion) {
+                        console.warn(
+                            `[makeObjectTypes]: Type "${name}" as zero fields. Skipping in output GQL schema.`,
+                        );
+                    }
                     continue;
                 }
                 const fieldDefs: string[] = [];
