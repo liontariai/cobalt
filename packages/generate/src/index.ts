@@ -213,9 +213,77 @@ export class Generator {
         }
     }
 
+    private syncUnionTypeResolveTypeFunction(
+        unionType: TypeMeta,
+        file: string,
+        options: { createFile?: boolean; $$typesSymbol?: string } = {},
+    ) {
+        if (!fs.existsSync(file) && options.createFile) {
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, "", "utf-8");
+        }
+
+        const $$typesSymbol = options.$$typesSymbol ?? 'import("$$types")';
+
+        if (unionType.isUnion && !unionType.isScalar && unionType.isObject) {
+            const pureOpTypeName = unionType.name.replaceAll("!", "");
+            const code = fs.readFileSync(file, "utf-8");
+            const ast = parse(Lang.TypeScript, code);
+            const root = ast.root();
+
+            // Find if resolveType already exists for this operation
+            // Search for any .resolveType assignment and check if it matches our operation
+            const resolveTypePattern =
+                "export const resolveType = ($PARAMS): $RET => $BODY";
+            const resolveTypeMatch = root.find(resolveTypePattern);
+
+            const resolveTypeCode = [
+                "",
+                "// Your resolver returns a Union Type. Therefore you must provide a resolveType function that resolves the abstract union type to a concrete type by it's typename.",
+                "// The following fully-typed template has been added by cobalt. Please make sure it resolves correctly, like the types indicate.",
+                `export const resolveType = (value: ${$$typesSymbol}.Unions["${pureOpTypeName}"]): ${$$typesSymbol}.UnionsResolveToTypename["${pureOpTypeName}"] => {`,
+                `    switch(value){`,
+                `        default:`,
+                `            return "";`,
+                `    }`,
+                `};`,
+            ].join("\n");
+
+            let newCode: string;
+
+            if (resolveTypeMatch) {
+                const args = resolveTypeMatch.getMatch("PARAMS")?.text() || "";
+
+                const regexUnionTypeImport = new RegExp(
+                    `${RegExp.escape($$typesSymbol)}\.Unions\\[(.*)\\]`,
+                );
+
+                const oldTypenameMatch = regexUnionTypeImport.exec(args)?.[1];
+                const updatedResolveTypeWithBody = oldTypenameMatch
+                    ? resolveTypeMatch
+                          .text()
+                          .replaceAll(
+                              oldTypenameMatch.slice(1, -1),
+                              pureOpTypeName,
+                          )
+                    : resolveTypeMatch.text();
+                const range = resolveTypeMatch.range();
+                newCode =
+                    code.slice(0, range.start.index) +
+                    updatedResolveTypeWithBody +
+                    code.slice(range.end.index);
+            } else {
+                newCode = resolveTypeCode + "\n" + code;
+            }
+
+            fs.writeFileSync(file, newCode, "utf-8");
+        }
+    }
+
     public async generate(operationsDir: string, options: CodegenOptions = {}) {
         const serverDir = path.resolve(operationsDir, "..");
         const typesDir = path.join(serverDir, "types");
+        const unionsDir = path.join(serverDir, "unions");
 
         const collector = new Collector();
         const schemaMeta = await gatherMeta(operationsDir, options, collector);
@@ -229,11 +297,15 @@ export class Generator {
 
         const opsImports: string[] = [];
         const extTypesImports: string[] = [];
+        const unionTypesImports: string[] = [];
+
         const queries: string[] = [];
         const mutations: string[] = [];
         const subscriptions: string[] = [];
         const extendedTypes: string[] = [];
-        const unionOperations: { typeName: string; importName: string }[] = [];
+
+        const unionTypes: { typeName: string; importName: string }[] = [];
+
         for (const operation of schemaMeta.operations) {
             opsImports.push(
                 `import { ${operation.operation} as ${operation.name} } from "${path.resolve(operationsDir, operation.file)}";`,
@@ -247,17 +319,45 @@ export class Generator {
             }
         }
 
+        const unionOps = new Set<TypeMeta>();
         for (const unionOperation of schemaMeta.operations.filter(
             (o) => o.type.isUnion,
         )) {
+            unionOps.add(unionOperation.type);
+
             const importName = `U_${unionOperation.operation}_${unionOperation.type.name.replaceAll("!", "")}`;
             opsImports.push(
                 `import { ${unionOperation.operation} as ${importName} } from "${path.resolve(operationsDir, unionOperation.file)}";`,
             );
-            unionOperations.push({
+            unionTypes.push({
                 typeName: unionOperation.type.name.replaceAll("!", ""),
                 importName,
             });
+        }
+        for (const unionType of schemaMeta.types.filter((t) => t.isUnion)) {
+            if (unionOps.has(unionType)) continue;
+
+            const filename = path.join(
+                unionsDir,
+                `${unionType.name.replaceAll("!", "")}.ts`,
+            );
+            this.syncUnionTypeResolveTypeFunction(unionType, filename, {
+                createFile: true,
+                $$typesSymbol: options.$$typesSymbol,
+            });
+
+            const importName = `U_${unionType.name.replaceAll("!", "")}`;
+            unionTypesImports.push(
+                `import * as ${importName} from "${path.resolve(unionsDir, `${unionType.name.replaceAll("!", "")}.ts`)}";`,
+            );
+            unionTypes.push({
+                typeName: unionType.name.replaceAll("!", ""),
+                importName,
+            });
+
+            if (options.onFileCollected) {
+                await options.onFileCollected(filename, unionType, "union");
+            }
         }
 
         for (const extType of schemaMeta.extendedTypes) {
@@ -301,7 +401,7 @@ export class Generator {
             )
             .join("\n");
 
-        const UnionTypes = unionOperations
+        const UnionTypes = unionTypes
             .map((u) => {
                 if (extendedTypes.includes(u.typeName)) {
                     return `${u.typeName}.__resolveType = ${u.importName}.resolveType;`;
@@ -316,11 +416,12 @@ export class Generator {
             `import { makeGraphQLResolverFn, makeGraphQLFieldResolver } from "@cobalt27/runtime";`,
             ...opsImports,
             ...extTypesImports,
+            ...unionTypesImports,
             queries.length && Query,
             mutations.length && Mutation,
             subscriptions.length && Subscription,
             extendedTypes.length && ExtendedTypes,
-            unionOperations.length && UnionTypes,
+            unionTypes.length && UnionTypes,
         ]
             .filter(Boolean)
             .join("\n");
