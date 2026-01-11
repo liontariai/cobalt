@@ -243,7 +243,7 @@ export class Generator {
         const typesDir = path.join(serverDir, "types");
 
         const collector = new Collector();
-        const schemaMeta = gatherMeta(operationsDir, options, collector);
+        const schemaMeta = await gatherMeta(operationsDir, options, collector);
 
         const typesFiles = this.generateTSTypesFile(schemaMeta);
         this.syncResolveTypeFunctions(schemaMeta);
