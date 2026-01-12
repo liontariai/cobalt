@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/runtime",
-    "version": "0.5.13",
+    "version": "0.5.14",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "types": "./types/index.d.ts",
