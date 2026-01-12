@@ -49,10 +49,17 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
                 );
                 const relativeTypesDir = path.relative(path.dirname(file), typesDir);
 
-                if (("type" in meta && meta.type.isUnion) || ("isUnion" in meta && meta.isUnion)) {
+                if (
+                    ("type" in meta && meta.type.isUnion) ||
+                    ("isUnion" in meta &&
+                        meta.isUnion &&
+                        !meta.isInput &&
+                        !meta.possibleTypes.some((pt) => pt.isScalar || pt.isEnum) &&
+                        meta.isObject)
+                ) {
                     const content = fs.readFileSync(file, "utf-8");
                     let newContent = content;
-                    if (!content.includes(`import type { $$types } from "${relativeTypesDir}"`)) {
+                    if (!content.includes(`import type { $$types } from`)) {
                         newContent = `import type { $$types } from "${relativeTypesDir}";\n${content}`;
                     }
                     fs.writeFileSync(file, newContent);
@@ -620,7 +627,7 @@ describe("E2E", () => {
 
                     expect(simple.value).toBe("Hello, World!");
                 });
-                test("With args", async () => {
+                test.only("With args", async () => {
                     const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.in-obj.with-args").catch(console.error))?.default;
                     (
                         await makeHandlerFromDir("./tests/unions", {
@@ -635,8 +642,34 @@ describe("E2E", () => {
                     const stringResult = await sdk.query.customScalarInObjWithArgsSimple({ arg: "Hello" })();
                     const numberResult = await sdk.query.customScalarInObjWithArgsSimple({ arg: 42 })();
 
+                    const argsUnionResult = await sdk.query.customScalarInObjWithArgsArgsUnion({ arg: { event: "click", payload: "Hello" } })(
+                        ({ value }) => ({
+                            value: value(({ $on }) => ({
+                                ...$on._event_click_payload_string_(({ event, payload }) => ({ event, payload })),
+                            })),
+                        }),
+                    );
+                    const argsUnionResult2 = await sdk.query.customScalarInObjWithArgsArgsUnion({ arg: { event: "scroll", payload: 42 } })(
+                        ({ value }) => ({
+                            value: value(({ $on }) => ({
+                                ...$on._event_scroll_payload_number_(({ event, payload }) => ({ event, payload })),
+                            })),
+                        }),
+                    );
+                    const argsUnionResult3 = await sdk.query.customScalarInObjWithArgsArgsUnion({ arg: { event: "mouseover", payload: true } })(
+                        ({ value }) => ({
+                            value: value(({ $on }) => ({
+                                ...$on._event_mouseover_payload_boolean_(({ event, payload }) => ({ event, payload })),
+                            })),
+                        }),
+                    );
+
                     expect(stringResult.value).toBe("Hello");
                     expect(numberResult.value).toBe(42);
+
+                    expect(argsUnionResult.value).toEqual({ event: "click", payload: "Hello" });
+                    expect(argsUnionResult2.value).toEqual({ event: "scroll", payload: 42 });
+                    expect(argsUnionResult3.value).toEqual({ event: "mouseover", payload: true });
                 });
                 describe("with $lazy", () => {
                     test("No args", async () => {

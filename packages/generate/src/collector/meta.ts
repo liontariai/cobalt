@@ -1695,7 +1695,7 @@ export const gatherMetaForType = (
         meta.scalarTSTypeIsFinal = true;
     } else if (
         meta.isScalar ||
-        meta.isObject ||
+        (meta.isObject && !meta.isUnion) ||
         // meta.isUnion || // keep this for now, because it's used for custom scalars
         meta.isEnum ||
         meta.isTuple
