@@ -128,7 +128,10 @@ export class Generator {
             if (
                 operation.type.isUnion &&
                 !operation.type.isScalar &&
-                operation.type.isObject
+                operation.type.isObject &&
+                !operation.type.possibleTypes.some(
+                    (pt) => pt.isScalar || pt.isEnum,
+                )
             ) {
                 const pureOpTypeName = operation.type.name.replaceAll("!", "");
                 const code = fs.readFileSync(operation.file, "utf-8");
@@ -218,14 +221,20 @@ export class Generator {
         file: string,
         options: { createFile?: boolean; $$typesSymbol?: string } = {},
     ) {
-        if (!fs.existsSync(file) && options.createFile) {
-            fs.mkdirSync(path.dirname(file), { recursive: true });
-            fs.writeFileSync(file, "", "utf-8");
-        }
+        if (
+            unionType.isUnion &&
+            !unionType.isScalar &&
+            unionType.isObject &&
+            !unionType.isInput &&
+            !unionType.possibleTypes.some((pt) => pt.isScalar || pt.isEnum)
+        ) {
+            if (!fs.existsSync(file) && options.createFile) {
+                fs.mkdirSync(path.dirname(file), { recursive: true });
+                fs.writeFileSync(file, "", "utf-8");
+            }
 
-        const $$typesSymbol = options.$$typesSymbol ?? 'import("$$types")';
+            const $$typesSymbol = options.$$typesSymbol ?? 'import("$$types")';
 
-        if (unionType.isUnion && !unionType.isScalar && unionType.isObject) {
             const pureOpTypeName = unionType.name.replaceAll("!", "");
             const code = fs.readFileSync(file, "utf-8");
             const ast = parse(Lang.TypeScript, code);
@@ -321,7 +330,12 @@ export class Generator {
 
         const unionOps = new Set<TypeMeta>();
         for (const unionOperation of schemaMeta.operations.filter(
-            (o) => o.type.isUnion,
+            (o) =>
+                o.type.isUnion &&
+                !o.type.isScalar &&
+                o.type.isObject &&
+                !o.type.isInput &&
+                !o.type.possibleTypes.some((pt) => pt.isScalar || pt.isEnum),
         )) {
             unionOps.add(unionOperation.type);
 
@@ -334,7 +348,14 @@ export class Generator {
                 importName,
             });
         }
-        for (const unionType of schemaMeta.types.filter((t) => t.isUnion)) {
+        for (const unionType of schemaMeta.types.filter(
+            (t) =>
+                t.isUnion &&
+                !t.isScalar &&
+                t.isObject &&
+                !t.isInput &&
+                !t.possibleTypes.some((pt) => pt.isScalar || pt.isEnum),
+        )) {
             if (unionOps.has(unionType)) continue;
 
             const filename = path.join(
