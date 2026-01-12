@@ -57,7 +57,7 @@
         "@electric-sql/pglite": "^0.3.7",
         "@openauthjs/openauth": "^0.4.3",
         "@prisma/client": "~6.13.0",
-        "@samarium.sdk/make": "^0.27.4",
+        "@samarium.sdk/make": "^0.27.5",
         "@zenstackhq/runtime": "~2.18.0",
         "@zenstackhq/sdk": "~2.18.0",
         "cookie": "^1.0.2",
@@ -72,7 +72,7 @@
       },
       "devDependencies": {
         "@cobalt27/dev": "workspace:*",
-        "@samarium.sdk/new": "^0.27.4",
+        "@samarium.sdk/new": "^0.27.5",
         "@types/aws-lambda": "8.10.147",
         "@types/bun": "latest",
         "@types/node": "latest",
@@ -92,7 +92,7 @@
         "@cobalt27/generate": "workspace:*",
         "@cobalt27/runtime": "workspace:*",
         "@graphql-tools/schema": "^10.0.14",
-        "@samarium.sdk/make": "^0.27.4",
+        "@samarium.sdk/make": "^0.27.5",
         "commander": "^12.1.0",
         "comment-json": "^4.2.5",
         "graphql": "^16.8.1",
@@ -520,9 +520,9 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.54.0", "", { "os": "win32", "cpu": "x64" }, "sha512-hYT5d3YNdSh3mbCU1gwQyPgQd3T2ne0A3KG8KSBdav5TiBg6eInVmV+TeR5uHufiIgSFg0XsOWGW5/RhNcSvPg=="],
 
-    "@samarium.sdk/make": ["@samarium.sdk/make@0.27.4", "", { "dependencies": { "graphql-request": "^7.1.0", "openapi-typescript": "^7.4.1" }, "peerDependencies": { "graphql": "^16.9.0", "typescript": "^5.0.0" } }, "sha512-LSjBk0j7jL07Jn/+MmTi/S7EpS+v6YAljWuGHa3w157xN9N7o5xVCMrRbbgzlQXo7rAZ2zzZShiGDLafgeO8sw=="],
+    "@samarium.sdk/make": ["@samarium.sdk/make@0.27.5", "", { "dependencies": { "graphql-request": "^7.1.0", "openapi-typescript": "^7.4.1" }, "peerDependencies": { "graphql": "^16.9.0", "typescript": "^5.0.0" } }, "sha512-DBYfhV4JVLXPqWFwGxey1RcTTNpy2Sv6a2Sm43ZtOkUTiDlxMnvez22bBK8B1cau5MtoOVw1LE/aR1jB/zDGhw=="],
 
-    "@samarium.sdk/new": ["@samarium.sdk/new@0.27.4", "", { "dependencies": { "@inquirer/prompts": "^5.0.5", "commander": "^11.1.0", "detect-indent": "^7.0.1", "prettier": "^3.2.5", "yaml": "^2.6.0" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "samarium": "bin/samarium" } }, "sha512-kjYBO4y6SYCVMRfSlzqT/gyM0aEbzFXx01uRnAOCjGFMMft8rf3RPIj/PCtu3cZ3teYKWUR+bzgIyAvWRp4I5w=="],
+    "@samarium.sdk/new": ["@samarium.sdk/new@0.27.5", "", { "dependencies": { "@inquirer/prompts": "^5.0.5", "commander": "^11.1.0", "detect-indent": "^7.0.1", "prettier": "^3.2.5", "yaml": "^2.6.0" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "samarium": "bin/samarium" } }, "sha512-ShixMXsbPDsm9gMb9dqtCBoDaOCV51kdfbEFG1roLMPtukEVU3JrGQrjukCaBrpg3W/HvQDQ0rKKdBbABde04g=="],
 
     "@smithy/abort-controller": ["@smithy/abort-controller@4.2.7", "", { "dependencies": { "@smithy/types": "^4.11.0", "tslib": "^2.6.2" } }, "sha512-rzMY6CaKx2qxrbYbqjXWS0plqEy7LOdKHS0bg4ixJ6aoGDPNUcLWk/FRNuCILh7GKLG9TFUXYYeQQldMBBwuyw=="],
 
