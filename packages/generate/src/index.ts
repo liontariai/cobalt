@@ -133,7 +133,10 @@ export class Generator {
                     (pt) => pt.isScalar || pt.isEnum,
                 )
             ) {
-                const pureOpTypeName = operation.type.name.replaceAll("!", "");
+                const pureOpTypeName = operation.type.name
+                    .replaceAll("!", "")
+                    .replaceAll("[", "")
+                    .replaceAll("]", "");
                 const code = fs.readFileSync(operation.file, "utf-8");
                 const ast = parse(Lang.TypeScript, code);
                 const root = ast.root();
@@ -235,7 +238,10 @@ export class Generator {
 
             const $$typesSymbol = options.$$typesSymbol ?? 'import("$$types")';
 
-            const pureOpTypeName = unionType.name.replaceAll("!", "");
+            const pureOpTypeName = unionType.name
+                .replaceAll("!", "")
+                .replaceAll("[", "")
+                .replaceAll("]", "");
             const code = fs.readFileSync(file, "utf-8");
             const ast = parse(Lang.TypeScript, code);
             const root = ast.root();
@@ -328,7 +334,7 @@ export class Generator {
             }
         }
 
-        const unionOps = new Set<TypeMeta>();
+        const unionOps = new Set<string>();
         for (const unionOperation of schemaMeta.operations.filter(
             (o) =>
                 o.type.isUnion &&
@@ -337,14 +343,18 @@ export class Generator {
                 !o.type.isInput &&
                 !o.type.possibleTypes.some((pt) => pt.isScalar || pt.isEnum),
         )) {
-            unionOps.add(unionOperation.type);
+            const typeName = unionOperation.type.name
+                .replaceAll("!", "")
+                .replaceAll("[", "")
+                .replaceAll("]", "");
+            unionOps.add(typeName);
 
-            const importName = `U_${unionOperation.operation}_${unionOperation.type.name.replaceAll("!", "")}`;
+            const importName = `U_${unionOperation.operation}_${typeName}`;
             opsImports.push(
                 `import { ${unionOperation.operation} as ${importName} } from "${path.resolve(operationsDir, unionOperation.file)}";`,
             );
             unionTypes.push({
-                typeName: unionOperation.type.name.replaceAll("!", ""),
+                typeName,
                 importName,
             });
         }
@@ -356,23 +366,24 @@ export class Generator {
                 !t.isInput &&
                 !t.possibleTypes.some((pt) => pt.isScalar || pt.isEnum),
         )) {
-            if (unionOps.has(unionType)) continue;
+            const typeName = unionType.name
+                .replaceAll("!", "")
+                .replaceAll("[", "")
+                .replaceAll("]", "");
+            if (unionOps.has(typeName)) continue;
 
-            const filename = path.join(
-                unionsDir,
-                `${unionType.name.replaceAll("!", "")}.ts`,
-            );
+            const filename = path.join(unionsDir, `${typeName}.ts`);
             this.syncUnionTypeResolveTypeFunction(unionType, filename, {
                 createFile: true,
                 $$typesSymbol: options.$$typesSymbol,
             });
 
-            const importName = `U_${unionType.name.replaceAll("!", "")}`;
+            const importName = `U_${typeName}`;
             unionTypesImports.push(
-                `import * as ${importName} from "${path.resolve(unionsDir, `${unionType.name.replaceAll("!", "")}.ts`)}";`,
+                `import * as ${importName} from "${path.resolve(unionsDir, `${typeName}.ts`)}";`,
             );
             unionTypes.push({
-                typeName: unionType.name.replaceAll("!", ""),
+                typeName,
                 importName,
             });
 
