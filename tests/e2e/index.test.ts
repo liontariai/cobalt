@@ -809,10 +809,28 @@ describe("E2E", () => {
                     const sdk = _sdk;
 
                     const simple = await sdk.query.gqlUnionsRootSimple(({ $on }) => ({
-                        ...$on._title_string_description_string_((s) => ({ ...s.$all({}) })),
+                        ...$on._title_string_description_string_(),
                     }));
 
                     expect(simple).toEqual({ title: "Hello, World!", description: "This is a test" });
+                });
+                test("No args, with aliasing", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/root/*.ts",
+                            typeFilesGlob: "gql-unions/root/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const simple = await sdk.query.gqlUnionsRootSimple(({ $on }) => ({
+                        alias1: $on._title_string_description_string_(),
+                    }));
+
+                    expect(simple.alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
                 });
                 test("With args", async () => {
                     const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root.with-args").catch(console.error))?.default;
@@ -834,6 +852,30 @@ describe("E2E", () => {
                     expect(urlResult).toEqual({ url: "https://www.google.com" });
                     expect(titleResult).toEqual({ title: "Hello, World!", description: "This is a test" });
                 });
+                test("With args, with aliasing", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root.with-args").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/root/with-args/*.ts",
+                            typeFilesGlob: "gql-unions/root/with-args/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const simple = await sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: true })(({ $on }) => ({
+                        alias1: $on._url_string_(),
+                    }));
+
+                    expect(simple.alias1).toEqual({ url: "https://www.google.com" });
+
+                    const simple2 = await sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: false })(({ $on }) => ({
+                        alias1: $on._title_string_description_string_(),
+                    }));
+
+                    expect(simple2.alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
+                });
 
                 describe("with $lazy", () => {
                     test("No args", async () => {
@@ -849,10 +891,28 @@ describe("E2E", () => {
                         const sdk = _sdk;
 
                         const simple = sdk.query.gqlUnionsRootSimple(({ $on }) => ({
-                            ...$on._title_string_description_string_((s) => ({ ...s.$all({}) })),
+                            ...$on._title_string_description_string_(),
                         })).$lazy;
 
                         expect(await simple()).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+                    test("No args, with aliasing", async () => {
+                        const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.root").catch(console.error))?.default;
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/root/*.ts",
+                                typeFilesGlob: "gql-unions/root/*.ts",
+                            })
+                        )(_sdk);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk;
+
+                        const simple = sdk.query.gqlUnionsRootSimple(({ $on }) => ({
+                            alias1: $on._title_string_description_string_(),
+                        })).$lazy;
+
+                        expect((await simple()).alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
                     });
                     test("With args", async () => {
                         const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.root.with-args").catch(console.error);
@@ -874,6 +934,29 @@ describe("E2E", () => {
 
                         expect(await urlResult({ returnUrl: true })).toEqual({ url: "https://www.google.com" });
                         expect(await titleResult({ returnUrl: false })).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+                    test("With args, with aliasing", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.root.with-args").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/root/with-args/*.ts",
+                                typeFilesGlob: "gql-unions/root/with-args/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const urlResult = sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            alias1: $on._url_string_(),
+                        })).$lazy;
+                        const titleResult = sdk.query.gqlUnionsRootWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            alias1: $on._title_string_description_string_(),
+                        })).$lazy;
+
+                        expect((await urlResult({ returnUrl: true })).alias1).toEqual({ url: "https://www.google.com" });
+                        expect((await titleResult({ returnUrl: false })).alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
                     });
                 });
             });
@@ -897,6 +980,26 @@ describe("E2E", () => {
                     }));
 
                     expect(titleResult).toEqual({ value: { title: "Hello, World!", description: "This is a test" } });
+                });
+                test("No args, with aliasing", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.in-obj").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/in-obj/*.ts",
+                            typeFilesGlob: "gql-unions/in-obj/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const titleResult = await sdk.query.gqlUnionsInObjSimple(({ value }) => ({
+                        value: value(({ $on }) => ({
+                            alias1: $on._title_string_description_string_(({ title, description }) => ({ title, description })),
+                        })),
+                    }));
+
+                    expect(titleResult.value.alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
                 });
                 test("With args", async () => {
                     const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error))?.default;
@@ -922,6 +1025,54 @@ describe("E2E", () => {
                     expect(urlResult).toEqual({ value: { url: "https://www.google.com" } });
                     expect(titleResult).toEqual({ value: { title: "Hello, World!", description: "This is a test" } });
                 });
+                test("With args, with aliasing", async () => {
+                    const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error))?.default;
+                    (
+                        await makeHandlerFromDir("./tests/unions", {
+                            operationFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                            typeFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                        })
+                    )(_sdk);
+                    if (!_sdk) return;
+
+                    const sdk = _sdk;
+
+                    const urlResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: true })(({ $on }) => ({
+                        alias1: $on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                            value: value(({ url }) => ({ url })),
+                        })),
+                        alias2: $on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                            value: value(({ url }) => ({ url })),
+                        })),
+                    }));
+                    const titleResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: false })(({ $on }) => ({
+                        alias1: $on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                            value: value(({ title, description }) => ({ title, description })),
+                        })),
+                    }));
+
+                    // expect(urlResult).toEqual({
+                    //     alias1: { value: { url: "https://www.google.com" } },
+                    //     alias2: { value: { url: "https://www.google.com" } },
+                    // });
+
+                    expect(urlResult.alias1).toEqual({ value: { url: "https://www.google.com" } });
+                    expect(urlResult.alias1.value).toEqual({ url: "https://www.google.com" });
+                    expect(urlResult.alias1.value.url).toEqual("https://www.google.com");
+
+                    expect(urlResult.alias2).toEqual({ value: { url: "https://www.google.com" } });
+                    expect(urlResult.alias2.value).toEqual({ url: "https://www.google.com" });
+                    expect(urlResult.alias2.value.url).toEqual("https://www.google.com");
+
+                    // expect(titleResult).toEqual({
+                    //     alias1: { value: { title: "Hello, World!", description: "This is a test" } },
+                    // });
+
+                    expect(titleResult.alias1).toEqual({ value: { title: "Hello, World!", description: "This is a test" } });
+                    expect(titleResult.alias1.value).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    expect(titleResult.alias1.value.title).toEqual("Hello, World!");
+                    expect(titleResult.alias1.value.description).toEqual("This is a test");
+                });
                 describe("with $lazy", () => {
                     test("No args", async () => {
                         const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.in-obj").catch(console.error);
@@ -944,6 +1095,28 @@ describe("E2E", () => {
 
                         expect((await titleResult()).value).toEqual({ title: "Hello, World!", description: "This is a test" });
                     });
+                    test("No args, with aliasing", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.in-obj").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/in-obj/*.ts",
+                                typeFilesGlob: "gql-unions/in-obj/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const titleResult = sdk.query.gqlUnionsInObjSimple(({ value }) => ({
+                            value: value(({ $on }) => ({
+                                alias1: $on._title_string_description_string_(({ title, description }) => ({ title, description })),
+                            })),
+                        })).$lazy;
+
+                        expect((await titleResult()).value.alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+
                     test("With args", async () => {
                         const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error);
                         (
@@ -970,6 +1143,36 @@ describe("E2E", () => {
 
                         expect((await urlResult({ returnUrl: true })).value).toEqual({ url: "https://www.google.com" });
                         expect((await titleResult({ returnUrl: false })).value).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    });
+                    test("With args, with aliasing", async () => {
+                        const _sdk = await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error);
+                        (
+                            await makeHandlerFromDir("./tests/unions", {
+                                operationFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                                typeFilesGlob: "gql-unions/in-obj/with-args/*.ts",
+                            })
+                        )(_sdk?.default);
+                        if (!_sdk) return;
+
+                        const sdk = _sdk.default;
+                        const _ = _sdk._;
+
+                        const urlResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            alias1: $on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                                value: value(({ url }) => ({ url })),
+                            })),
+                        })).$lazy;
+                        const titleResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
+                            alias1: $on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                                value: value(({ title, description }) => ({ title, description })),
+                            })),
+                        })).$lazy;
+
+                        expect((await urlResult({ returnUrl: true })).alias1.value).toEqual({ url: "https://www.google.com" });
+                        expect((await titleResult({ returnUrl: false })).alias1.value).toEqual({
+                            title: "Hello, World!",
+                            description: "This is a test",
+                        });
                     });
                 });
             });
