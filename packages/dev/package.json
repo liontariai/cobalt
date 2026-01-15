@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/dev",
-    "version": "0.5.14",
+    "version": "0.5.15",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "type": "module",
