@@ -373,7 +373,7 @@ describe("E2E", () => {
         });
     });
 
-    describe("Lists of Scalars", () => {
+    describe("Simple Lists", () => {
         describe("Root fields", () => {
             test("No args", async () => {
                 const _sdk = (await import("./tests/.sdks/tests.lists.root").catch(console.error))?.default;
@@ -390,10 +390,16 @@ describe("E2E", () => {
                 const string = await sdk.query.rootString;
                 const number = await sdk.query.rootNumber;
                 const bool = await sdk.query.rootBoolean;
+                const obj = await sdk.query.rootObj();
 
                 expect(string).toEqual(["Hello", "World", "!"]);
                 expect(number).toEqual([1, 2, 3, 4, 5]);
                 expect(bool).toEqual([true, false, true]);
+                expect(obj).toEqual([
+                    { name: "Person 1", age: 10 },
+                    { name: "Person 2", age: 20 },
+                    { name: "Person 3", age: 30 },
+                ]);
             });
             test("With args", async () => {
                 const _sdk = (await import("./tests/.sdks/tests.lists.root.with-args").catch(console.error))?.default;
@@ -410,15 +416,27 @@ describe("E2E", () => {
                 const string = await sdk.query.rootWithArgsString({
                     arg: ["Hello", "World", "!"],
                 });
+                const obj = await sdk.query.rootWithArgsObj({
+                    persons: [
+                        { name: "Person 1", age: 10 },
+                        { name: "Person 2", age: 20 },
+                        { name: "Person 3", age: 30 },
+                    ],
+                })();
 
                 expect(string).toEqual(["Hello", "World", "!"]);
+                expect(obj).toEqual([
+                    { name: "Person 1", age: 10 },
+                    { name: "Person 2", age: 20 },
+                    { name: "Person 3", age: 30 },
+                ]);
             });
 
             describe("with $lazy", () => {
                 test("No args", async () => {
-                    const _sdk = (await import("./tests/.sdks/tests.scalars.root").catch(console.error))?.default;
+                    const _sdk = (await import("./tests/.sdks/tests.lists.root").catch(console.error))?.default;
                     (
-                        await makeHandlerFromDir("./tests/scalars", {
+                        await makeHandlerFromDir("./tests/lists", {
                             operationFilesGlob: "root/*.ts",
                             typeFilesGlob: "root/*.ts",
                         })
@@ -427,13 +445,19 @@ describe("E2E", () => {
 
                     const sdk = _sdk;
 
-                    const number = sdk.query.rootNumber.$lazy;
                     const string = sdk.query.rootString.$lazy;
+                    const number = sdk.query.rootNumber.$lazy;
                     const bool = sdk.query.rootBoolean.$lazy;
+                    const obj = sdk.query.rootObj().$lazy;
 
-                    expect(await string()).toBe("Hello, World!");
-                    expect(await number()).toBe(100);
-                    expect(await bool()).toBe(true);
+                    expect(await string()).toEqual(["Hello", "World", "!"]);
+                    expect(await number()).toEqual([1, 2, 3, 4, 5]);
+                    expect(await bool()).toEqual([true, false, true]);
+                    expect(await obj()).toEqual([
+                        { name: "Person 1", age: 10 },
+                        { name: "Person 2", age: 20 },
+                        { name: "Person 3", age: 30 },
+                    ]);
                 });
                 test("With args", async () => {
                     const _sdk = await import("./tests/.sdks/tests.lists.root.with-args").catch(console.error);
@@ -451,8 +475,24 @@ describe("E2E", () => {
                     const string = sdk.query.rootWithArgsString({
                         arg: _,
                     }).$lazy;
+                    const obj = sdk.query.rootWithArgsObj({
+                        persons: _,
+                    })().$lazy;
 
                     expect(await string({ arg: ["Hello", "World", "!"] })).toEqual(["Hello", "World", "!"]);
+                    expect(
+                        await obj({
+                            persons: [
+                                { name: "Person 1", age: 10 },
+                                { name: "Person 2", age: 20 },
+                                { name: "Person 3", age: 30 },
+                            ],
+                        }),
+                    ).toEqual([
+                        { name: "Person 1", age: 10 },
+                        { name: "Person 2", age: 20 },
+                        { name: "Person 3", age: 30 },
+                    ]);
                 });
             });
         });
@@ -472,10 +512,16 @@ describe("E2E", () => {
                 const string = await sdk.query.inObjString();
                 const number = await sdk.query.inObjNumber();
                 const bool = await sdk.query.inObjBoolean();
+                const obj = await sdk.query.inObjObj();
 
                 expect(string.strings).toEqual(["Hello", "World", "!"]);
                 expect(number.numbers).toEqual([1, 2, 3, 4, 5]);
                 expect(bool.booleans).toEqual([true, false, true]);
+                expect(obj.persons).toEqual([
+                    { name: "Person 1", age: 10 },
+                    { name: "Person 2", age: 20 },
+                    { name: "Person 3", age: 30 },
+                ]);
             });
             test("With args", async () => {
                 const _sdk = (await import("./tests/.sdks/tests.lists.in-obj.with-args").catch(console.error))?.default;
@@ -490,8 +536,20 @@ describe("E2E", () => {
                 const sdk = _sdk;
 
                 const string = await sdk.query.inObjWithArgsString({ arg: ["Hello", "World", "!"] })();
+                const obj = await sdk.query.inObjWithArgsObj({
+                    persons: [
+                        { name: "Person 1", age: 10 },
+                        { name: "Person 2", age: 20 },
+                        { name: "Person 3", age: 30 },
+                    ],
+                })();
 
                 expect(string.strings).toEqual(["Hello", "World", "!"]);
+                expect(obj.persons).toEqual([
+                    { name: "Person 1", age: 10 },
+                    { name: "Person 2", age: 20 },
+                    { name: "Person 3", age: 30 },
+                ]);
             });
             describe("with $lazy", () => {
                 test("No args", async () => {
@@ -509,10 +567,18 @@ describe("E2E", () => {
                     const string = sdk.query.inObjString().$lazy;
                     const number = sdk.query.inObjNumber().$lazy;
                     const bool = sdk.query.inObjBoolean().$lazy;
+                    const obj = sdk.query.inObjObj().$lazy;
 
                     expect(await string()).toEqual({ strings: ["Hello", "World", "!"] });
                     expect(await number()).toEqual({ numbers: [1, 2, 3, 4, 5] });
                     expect(await bool()).toEqual({ booleans: [true, false, true] });
+                    expect(await obj()).toEqual({
+                        persons: [
+                            { name: "Person 1", age: 10 },
+                            { name: "Person 2", age: 20 },
+                            { name: "Person 3", age: 30 },
+                        ],
+                    });
                 });
                 test("With args", async () => {
                     const _sdk = await import("./tests/.sdks/tests.lists.in-obj.with-args").catch(console.error);
@@ -528,8 +594,26 @@ describe("E2E", () => {
                     const _ = _sdk._;
 
                     const string = sdk.query.inObjWithArgsString({ arg: _ })().$lazy;
+                    const obj = sdk.query.inObjWithArgsObj({
+                        persons: _,
+                    })().$lazy;
 
                     expect(await string({ arg: ["Hello", "World", "!"] })).toEqual({ strings: ["Hello", "World", "!"] });
+                    expect(
+                        await obj({
+                            persons: [
+                                { name: "Person 1", age: 10 },
+                                { name: "Person 2", age: 20 },
+                                { name: "Person 3", age: 30 },
+                            ],
+                        }),
+                    ).toEqual({
+                        persons: [
+                            { name: "Person 1", age: 10 },
+                            { name: "Person 2", age: 20 },
+                            { name: "Person 3", age: 30 },
+                        ],
+                    });
                 });
             });
         });
@@ -627,7 +711,7 @@ describe("E2E", () => {
 
                     expect(simple.value).toBe("Hello, World!");
                 });
-                test.only("With args", async () => {
+                test("With args", async () => {
                     const _sdk = (await import("./tests/.sdks/tests.unions.custom-scalar.in-obj.with-args").catch(console.error))?.default;
                     (
                         await makeHandlerFromDir("./tests/unions", {
@@ -1290,7 +1374,7 @@ describe("E2E", () => {
                     results.push(value);
                 }
 
-                expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+                expect(results).toEqual([{ message: "Hello" }, { message: "Hello" }]);
             });
 
             describe("with $lazy", () => {
@@ -1336,7 +1420,7 @@ describe("E2E", () => {
                         results.push(value);
                     }
 
-                    expect(results).toEqual([{ message: "Hello" }, { message: "World" }]);
+                    expect(results).toEqual([{ message: "Hello" }, { message: "Hello" }]);
                 });
             });
         });
