@@ -999,7 +999,11 @@ describe("E2E", () => {
                         })),
                     }));
 
+                    expect(titleResult).toEqual({ value: { alias1: { title: "Hello, World!", description: "This is a test" } } });
+                    expect(titleResult.value).toEqual({ alias1: { title: "Hello, World!", description: "This is a test" } });
                     expect(titleResult.value.alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
+                    expect(titleResult.value.alias1.title).toEqual("Hello, World!");
+                    expect(titleResult.value.alias1.description).toEqual("This is a test");
                 });
                 test("With args", async () => {
                     const _sdk = (await import("./tests/.sdks/tests.unions.gql-unions.in-obj.with-args").catch(console.error))?.default;
@@ -1051,10 +1055,10 @@ describe("E2E", () => {
                         })),
                     }));
 
-                    // expect(urlResult).toEqual({
-                    //     alias1: { value: { url: "https://www.google.com" } },
-                    //     alias2: { value: { url: "https://www.google.com" } },
-                    // });
+                    expect(urlResult).toEqual({
+                        alias1: { value: { url: "https://www.google.com" } },
+                        alias2: { value: { url: "https://www.google.com" } },
+                    });
 
                     expect(urlResult.alias1).toEqual({ value: { url: "https://www.google.com" } });
                     expect(urlResult.alias1.value).toEqual({ url: "https://www.google.com" });
@@ -1064,9 +1068,9 @@ describe("E2E", () => {
                     expect(urlResult.alias2.value).toEqual({ url: "https://www.google.com" });
                     expect(urlResult.alias2.value.url).toEqual("https://www.google.com");
 
-                    // expect(titleResult).toEqual({
-                    //     alias1: { value: { title: "Hello, World!", description: "This is a test" } },
-                    // });
+                    expect(titleResult).toEqual({
+                        alias1: { value: { title: "Hello, World!", description: "This is a test" } },
+                    });
 
                     expect(titleResult.alias1).toEqual({ value: { title: "Hello, World!", description: "This is a test" } });
                     expect(titleResult.alias1.value).toEqual({ title: "Hello, World!", description: "This is a test" });
@@ -1114,7 +1118,12 @@ describe("E2E", () => {
                             })),
                         })).$lazy;
 
+                        expect(await titleResult()).toEqual({ value: { alias1: { title: "Hello, World!", description: "This is a test" } } });
+
+                        expect((await titleResult()).value).toEqual({ alias1: { title: "Hello, World!", description: "This is a test" } });
                         expect((await titleResult()).value.alias1).toEqual({ title: "Hello, World!", description: "This is a test" });
+                        expect((await titleResult()).value.alias1.title).toEqual("Hello, World!");
+                        expect((await titleResult()).value.alias1.description).toEqual("This is a test");
                     });
 
                     test("With args", async () => {
@@ -1168,11 +1177,25 @@ describe("E2E", () => {
                             })),
                         })).$lazy;
 
+                        expect(await urlResult({ returnUrl: true })).toEqual({ alias1: { value: { url: "https://www.google.com" } } });
+
+                        expect((await urlResult({ returnUrl: true })).alias1).toEqual({ value: { url: "https://www.google.com" } });
                         expect((await urlResult({ returnUrl: true })).alias1.value).toEqual({ url: "https://www.google.com" });
+                        expect((await urlResult({ returnUrl: true })).alias1.value.url).toEqual("https://www.google.com");
+
+                        expect(await titleResult({ returnUrl: false })).toEqual({
+                            alias1: { value: { title: "Hello, World!", description: "This is a test" } },
+                        });
+
+                        expect((await titleResult({ returnUrl: false })).alias1).toEqual({
+                            value: { title: "Hello, World!", description: "This is a test" },
+                        });
                         expect((await titleResult({ returnUrl: false })).alias1.value).toEqual({
                             title: "Hello, World!",
                             description: "This is a test",
                         });
+                        expect((await titleResult({ returnUrl: false })).alias1.value.title).toEqual("Hello, World!");
+                        expect((await titleResult({ returnUrl: false })).alias1.value.description).toEqual("This is a test");
                     });
                 });
             });
