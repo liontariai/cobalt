@@ -109,12 +109,12 @@ export const generateBasePackageJson = (
                 .map(([key, value]) => [
                     ["dev", "build", "start"].includes(key)
                         ? [
-                              [`${config.template?.shortName}:${key}`, value],
-                              [
-                                  key,
-                                  `concurrently ${["dev", "start"].includes(key) ? "--restartTries 10 --restartDelay 2000" : ""} "cobalt ${key}" "bun run ${config.template?.shortName}:${key}"`,
-                              ],
-                          ]
+                            [`${config.template?.shortName}:${key}`, value],
+                            [
+                                key,
+                                `concurrently ${["dev", "start"].includes(key) ? "--restartTries 10 --restartDelay 2000" : ""} "cobalt ${key}" "bun run ${config.template?.shortName}:${key}"`,
+                            ],
+                        ]
                         : [[key, value]],
                 ])
                 .flat(2),
@@ -289,23 +289,32 @@ export default {
 `;
 
 // Shared base files that every template should include
-export const generateBaseFiles = (config: ProjectConfigInitialized) => {
+export const generateBaseFiles = (config: ProjectConfigInitialized): { path: string; generator: (config?: ProjectConfigInitialized) => string | Buffer; skipWhenTemplate?: boolean }[] => {
     return [
         ...[
             config.withAuth
                 ? [
-                      {
-                          path: `${config.srcBaseDir}/server/auth.ts`,
-                          generator: () => generateAuthContent(config),
-                      },
-                      {
-                          path: `.env.local`,
-                          generator: () =>
-                              `OPENAUTH_ISSUER=http://localhost:4000`,
-                      },
-                  ]
+                    {
+                        path: `${config.srcBaseDir}/server/auth.ts`,
+                        generator: () => generateAuthContent(config),
+                    },
+                    {
+                        path: `.env.local`,
+                        generator: () =>
+                            `OPENAUTH_ISSUER=http://localhost:4000`,
+                    },
+                ]
                 : [],
         ].flat(),
+        {
+            path: `${config.srcBaseDir}/index.ts`,
+            skipWhenTemplate: true,
+            generator: () => `import sdk from "sdk";
+
+const user = await sdk.query.profile();
+
+console.log(user);`,
+        },
         {
             path: `${config.srcBaseDir}/server/ctx.ts`,
             generator: () => generateCtxContent(config),
