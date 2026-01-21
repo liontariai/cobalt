@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Cobalt',
   description: 'Use GraphQL in a tRPC style. tRPC\'s speed, GQL\'s flexibility.',
+  base: '/docs/',
 
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }],
