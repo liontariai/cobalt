@@ -6,3 +6,4 @@ build/
 *.db
 
 node_modules
+docs/.vitepress
