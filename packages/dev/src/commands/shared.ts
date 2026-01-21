@@ -27,7 +27,7 @@ export const createDirectory = (dirPath: string) => {
     }
 };
 
-export const writeFile = (filePath: string, content: string) => {
+export const writeFile = (filePath: string, content: string | Buffer) => {
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -309,7 +309,7 @@ export const readManifestFromBundledServer = async (serverPath: string) => {
     }
     const manifestString = manifestOutput.substring(
         manifestOutput.indexOf("=== BUILD MANIFEST ===\n") +
-            "=== BUILD MANIFEST ===\n".length,
+        "=== BUILD MANIFEST ===\n".length,
         manifestOutput.indexOf("=== END BUILD MANIFEST ===\n"),
     );
 

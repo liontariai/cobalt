@@ -6,20 +6,12 @@ import { useAsyncIterable } from "@/hooks/useAsyncGen";
 import useSWR from "swr";
 import { Link } from "react-router-dom";
 
-export const getTodos = sdk.query.todos(_)((s) => s.$all({})).$lazy;
-export const createTodo = sdk.mutation.createOneTodo(_)((s) =>
-    s.$all({}),
-).$lazy;
-export const updateTodo = sdk.mutation.updateOneTodo(_)((s) =>
-    s.$all({}),
-).$lazy;
-export const deleteTodo = sdk.mutation.deleteOneTodo(_)((s) =>
-    s.$all({}),
-).$lazy;
+export const getTodos = sdk.query.todos(_)().$lazy;
+export const createTodo = sdk.mutation.createOneTodo(_)().$lazy;
+export const updateTodo = sdk.mutation.updateOneTodo(_)().$lazy;
+export const deleteTodo = sdk.mutation.deleteOneTodo(_)().$lazy;
 
-export const streamTodos = sdk.subscription.streamTodos(_)((s) =>
-    s.$all({}),
-).$lazy;
+export const streamTodos = sdk.subscription.streamTodos(_)().$lazy;
 
 export default function Index() {
     const [searchText, setSearchText] = useState("");
@@ -57,7 +49,7 @@ export default function Index() {
         (todo) => {
             setStreamedTodos((t) => [...t, todo]);
         },
-        () => {},
+        () => { },
     );
 
     const allTodos = useMemo(

@@ -25,7 +25,7 @@ export type TemplateConfig = {
     directories: string[];
     files: Array<{
         path: string;
-        generator: (config: ProjectConfigInitialized) => string;
+        generator: (config: ProjectConfigInitialized) => string | Buffer;
     }>;
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;

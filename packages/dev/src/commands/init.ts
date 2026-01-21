@@ -168,7 +168,10 @@ const createProjectFiles = async (config: ProjectConfigInitialized) => {
     if (template) {
         templateConfig = template;
 
-        generateBaseFiles(config).forEach(({ path: filePath, generator }) => {
+        generateBaseFiles(config).forEach(({ path: filePath, generator, skipWhenTemplate }) => {
+            if (skipWhenTemplate) {
+                return;
+            }
             writeFile(path.join(projectDir, filePath), generator());
         });
 
@@ -178,7 +181,7 @@ const createProjectFiles = async (config: ProjectConfigInitialized) => {
                 generator,
             }: {
                 path: string;
-                generator: (config: ProjectConfigInitialized) => string;
+                generator: (config: ProjectConfigInitialized) => string | Buffer;
             }) => {
                 writeFile(path.join(projectDir, filePath), generator(config));
             },
@@ -228,12 +231,11 @@ Next steps:
 3. bun dev
 
 Your GraphQL server will be available at http://localhost:4000/graphql
-${
-    config.template?.name === "react-router-v7"
-        ? `
+${config.template?.name === "react-router-v7"
+            ? `
 Your React app will be available at http://localhost:4000`
-        : ""
-}
+            : ""
+        }
 `);
 };
 
@@ -254,8 +256,7 @@ const initializeProject = async (config: ProjectConfig) => {
     }
 
     console.log(
-        `🚀 Initializing Cobalt project: ${config.name}${
-            templateConfig ? ` (${templateConfig.name})` : ""
+        `🚀 Initializing Cobalt project: ${config.name}${templateConfig ? ` (${templateConfig.name})` : ""
         }`,
     );
 
