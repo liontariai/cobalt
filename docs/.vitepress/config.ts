@@ -4,6 +4,8 @@ export default defineConfig({
   title: 'Cobalt',
   description: 'Use GraphQL in a tRPC style. tRPC\'s speed, GQL\'s flexibility.',
   base: '/docs/',
+  cleanUrls: true,
+  lang: 'en-US',
 
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }],
@@ -11,6 +13,7 @@ export default defineConfig({
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'Cobalt - GraphQL in a tRPC style' }],
     ['meta', { property: 'og:description', content: 'tRPC\'s speed, GQL\'s flexibility. No headaches. No compromise.' }],
+    ['script', { defer: 'true', 'data-domain': 'cobalt27.dev', src: 'https://pl.liontari.ai/js/script.js' }],
   ],
 
   themeConfig: {
@@ -110,7 +113,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the SSPL License.',
-      copyright: 'Copyright © 2024-present Cobalt'
+      copyright: 'Copyright © 2024-present cobalt27.dev'
     },
 
     search: {
