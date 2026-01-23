@@ -1,12 +1,14 @@
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from "bun:test";
 import fs from "fs";
 import path from "path";
-import { tmpdir } from "os";
 import { initializeAndCompile } from "../../packages/dev/src/commands/shared";
 import { makeGraphQLHandler } from "../../packages/dev/src/util";
 import { createHandler } from "graphql-sse/lib/use/fetch";
+import { render, waitFor, act, findByTestId } from "@testing-library/react";
+import { Suspense, use, useMemo } from "react";
+import "./setup";
 
-const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: string; typeFilesGlob?: string }) => {
+const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: string; typeFilesGlob?: string }, appendOperationDir = true) => {
     let ctxDir: string = dir;
     let tries = 0;
     const searchCtxDirs = [];
@@ -25,7 +27,7 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
 
     let { ctxFile, gqlSchema, writeSdkOut, writeSchemaOut, writeTypesOut } = await initializeAndCompile(
         {
-            dir: path.join(dir, "operations"),
+            dir: appendOperationDir ? path.join(dir, "operations") : dir,
             port: 4000,
             pretty: true,
             sdkOut: path.join(
@@ -152,19 +154,7 @@ const makeHandlerFromDir = async (dir: string, options?: { operationFilesGlob?: 
     return configureSdkWithHandler;
 };
 
-describe("E2E", () => {
-    beforeAll(async () => {
-        // Optionally: start server or prepare environment if needed
-    });
-
-    afterAll(async () => {
-        // Optionally: cleanup resources
-    });
-
-    beforeEach(async () => {
-        // Optionally: reset database or state before each test
-    });
-
+describe("Basic", () => {
     describe("Scalars", () => {
         describe("Root fields", () => {
             test("No args", async () => {
@@ -2096,6 +2086,81 @@ describe("E2E", () => {
                     expect(result.result.nested.items).toEqual(["a", "b", "c"]);
                 });
             });
+        });
+    });
+});
+
+describe("Frontend Integration", () => {
+    describe("React 'use' hook", () => {
+        test("use hook with Suspense", async () => {
+            const _sdk = (await import("./tests/.sdks/tests.complex").catch(console.error))?.default;
+            (await makeHandlerFromDir("./tests/complex"))(_sdk);
+
+            if (!_sdk) return;
+
+            const sdk = _sdk;
+
+            // Create a component that uses the 'use' hook with a promise
+            const promise = sdk.query.rootMixed();
+            const TestComponent = () => {
+                const result = use(promise);
+
+                return (
+                    <div>
+                        <div data-testid="scalar">{result.scalar}</div>
+                        <div data-testid="list">{JSON.stringify(result.list)}</div>
+                        <div data-testid="nested-value">{result.nested.value}</div>
+                        <div data-testid="nested-items">{JSON.stringify(result.nested.items)}</div>
+                    </div>
+                );
+            };
+
+            const Fallback = () => <div data-testid="loading">Loading...</div>;
+
+            let renderResult: any;
+
+            // Render inside act to handle the initial Suspense
+            await act(async () => {
+                renderResult = render(
+                    <Suspense fallback={<Fallback />}>
+                        <TestComponent />
+                    </Suspense>
+                );
+            });
+
+            const { findByTestId, queryByTestId } = renderResult;
+
+            // Wait for the content to appear - this needs to be in act to handle Suspense resolution
+            let scalarElement: any;
+            await act(async () => {
+                scalarElement = await findByTestId("scalar", {}, { timeout: 10000 });
+            });
+
+            expect(scalarElement.textContent).toBe("Hello, World!");
+
+            // Verify loading is gone - also in act
+            await act(async () => {
+                expect(queryByTestId("loading")).toBeFalsy();
+            });
+
+            // Verify other elements - all in act
+            let listElement: any;
+            await act(async () => {
+                listElement = await findByTestId("list");
+            });
+            expect(listElement.textContent).toBe(JSON.stringify([1, 2, 3]));
+
+            let nestedValueElement: any;
+            await act(async () => {
+                nestedValueElement = await findByTestId("nested-value");
+            });
+            expect(nestedValueElement.textContent).toBe("nested");
+
+            let nestedItemsElement: any;
+            await act(async () => {
+                nestedItemsElement = await findByTestId("nested-items");
+            });
+            expect(nestedItemsElement.textContent).toBe(JSON.stringify(["a", "b", "c"]));
         });
     });
 });

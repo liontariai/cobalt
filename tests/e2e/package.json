@@ -6,7 +6,16 @@
     "dependencies": {
         "@cobalt27/auth": "workspace:*",
         "@cobalt27/dev": "workspace:*",
-        "@cobalt27/runtime": "workspace:*"
+        "@cobalt27/runtime": "workspace:*",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+        "@testing-library/react": "^16.1.0",
+        "@testing-library/jest-dom": "^6.6.3",
+        "happy-dom": "^15.11.6"
+    },
+    "devDependencies": {
+        "@types/react": "^19.1.2",
+        "@types/react-dom": "^19.1.2"
     },
     "prettier": {
         "tabWidth": 4,
