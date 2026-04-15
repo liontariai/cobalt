@@ -2,7 +2,8 @@
     "name": "@liontari.ai/cobalt",
     "license": "SSPL-1.0",
     "scripts": {
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "publish:all": "cd packages/auth && bun publish && cd ../dev && bun publish && cd ../generate && bun publish && cd ../runtime && bun publish && cd .."
     },
     "devDependencies": {
         "@types/bun": "latest",
