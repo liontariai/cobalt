@@ -148,13 +148,14 @@ export const gatherMetaFromOperationsDir = async (
     if (fs_module.existsSync(typesDir)) {
         try {
             files.push(...typeFiles.scanSync());
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const notResolvableModules: {
         moduleName: string;
         fromPath?: string;
     }[] = [];
+
     const program = createProgram(
         files,
         serverDir,
@@ -285,8 +286,8 @@ export const gatherMetaFromFiles = async (
         )
             ? "operation"
             : file.startsWith(typesDir)
-              ? "type"
-              : "unknown";
+                ? "type"
+                : "unknown";
 
         if (fileType === "unknown") continue;
         if (fileType === "operation") {
@@ -502,14 +503,14 @@ export const gatherMetaFromFiles = async (
         const friendlyNameWithoutListBrackets = nameIsWithoutListBrackets
             ? name
             : makeProtocolFriendlyName(
-                  isList ? name.slice(isList, -isList) : name,
-                  collectRenamedTypes,
-              );
+                isList ? name.slice(isList, -isList) : name,
+                collectRenamedTypes,
+            );
         return `${Array(isList)
             .fill("[")
             .join("")}${friendlyNameWithoutListBrackets}${Array(isList)
-            .fill("]")
-            .join("")}`;
+                .fill("]")
+                .join("")}`;
     };
 
     for (const [typeName, references] of collector.typeReferences.entries()) {
@@ -522,13 +523,13 @@ export const gatherMetaFromFiles = async (
                     .map((t) =>
                         t.tsType!.aliasSymbol
                             ? `${makeProtocolFriendlyName(
-                                  t.name,
-                                  collectRenamedTypes,
-                                  ["[", "]"],
-                              ).replaceAll(
-                                  /\[|\]/g,
-                                  "",
-                              )}${Array(t.isList).fill("[]").join("")}`
+                                t.name,
+                                collectRenamedTypes,
+                                ["[", "]"],
+                            ).replaceAll(
+                                /\[|\]/g,
+                                "",
+                            )}${Array(t.isList).fill("[]").join("")}`
                             : t.tsTypeName,
                     )
                     .join(" | ");
@@ -539,9 +540,9 @@ export const gatherMetaFromFiles = async (
             } else {
                 type.scalarTSType = type.tsType!.aliasSymbol
                     ? makeProtocolFriendlyName(
-                          type.tsTypeName!,
-                          collectRenamedTypes,
-                      )
+                        type.tsTypeName!,
+                        collectRenamedTypes,
+                    )
                     : type.tsTypeName;
             }
         }
@@ -1032,9 +1033,9 @@ export const gatherMetaForType = (
 
         description: symbol
             ? symbol
-                  .getDocumentationComment(program.checker)
-                  .map((part) => part.text)
-                  .join("")
+                .getDocumentationComment(program.checker)
+                .map((part) => part.text)
+                .join("")
             : undefined,
 
         isObject: false,
@@ -1202,13 +1203,13 @@ export const gatherMetaForType = (
                             _t.isStringLiteral()
                                 ? `"${_t.value}"`
                                 : _t.isNumberLiteral()
-                                  ? _t.value
-                                  : () => {
+                                    ? _t.value
+                                    : () => {
                                         const unionMeta = gatherMetaForType(
                                             [
                                                 ...path,
                                                 t.aliasSymbol?.escapedName ??
-                                                    t.symbol?.name,
+                                                t.symbol?.name,
                                             ].join("."),
                                             { type: t, symbol: t.symbol },
                                             program,
@@ -1217,7 +1218,7 @@ export const gatherMetaForType = (
                                             [
                                                 ...path,
                                                 t.aliasSymbol?.escapedName ??
-                                                    t.symbol?.name,
+                                                t.symbol?.name,
                                             ].filter(Boolean) as string[],
                                             meta,
                                             collectOuterTypeMetadata,
@@ -1345,7 +1346,7 @@ export const gatherMetaForType = (
                 const singleTypeNameArr = [
                     ...path,
                     tsType.types[0].aliasSymbol?.escapedName ??
-                        tsType.types[0].symbol?.name,
+                    tsType.types[0].symbol?.name,
                 ];
                 collector.removeTypeReference(
                     identifyingTypeName,
@@ -1476,7 +1477,7 @@ export const gatherMetaForType = (
                     tsType,
                     undefined,
                     ts.TypeFormatFlags.InTypeAlias |
-                        ts.TypeFormatFlags.NoTruncation,
+                    ts.TypeFormatFlags.NoTruncation,
                 ),
                 `${path.length === 1 ? path.join(".") : name}.`,
             ),
@@ -1558,8 +1559,8 @@ export const gatherMetaForType = (
                             type: returnType,
                             symbol: sig.declaration
                                 ? program.checker.getSymbolAtLocation(
-                                      sig.declaration,
-                                  )
+                                    sig.declaration,
+                                )
                                 : undefined,
                         },
                         program,

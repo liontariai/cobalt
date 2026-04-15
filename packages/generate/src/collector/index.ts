@@ -6,7 +6,7 @@ export { type CodegenOptions, gatherMetaFromOperationsDir, gatherMetaFromFiles }
  * This information is used to cut infinite loops in the code generation process.
  */
 export class Collector {
-    constructor() {}
+    constructor() { }
 
     private _typeReferences: Map<string, string[]> = new Map();
     get typeReferences(): Map<string, string[]> {

@@ -7,7 +7,7 @@ import type { CodegenOptions, SchemaMeta, TypeMeta } from "./collector/types";
 
 import { parse, Lang } from "@ast-grep/napi";
 export class Generator {
-    constructor() {}
+    constructor() { }
 
     private generateTSTypesFile(schemaMeta: SchemaMeta) {
         const typesFiles: Record<string, string> = {};
@@ -91,27 +91,27 @@ export class Generator {
         typesFiles["index"] = `
             export type Types = {
                 ${Array.from(typeNames)
-                    .map(
-                        (typeName) =>
-                            `${typeName}: import("./${typeName}").${typeName},`,
-                    )
-                    .join("\n")}
+                .map(
+                    (typeName) =>
+                        `${typeName}: import("./${typeName}").${typeName},`,
+                )
+                .join("\n")}
             }
             export type Unions = {
                 ${Array.from(unionTypeNames)
-                    .map(
-                        (typeName) =>
-                            `${typeName}: import("./${typeName}").${typeName},`,
-                    )
-                    .join("\n")}
+                .map(
+                    (typeName) =>
+                        `${typeName}: import("./${typeName}").${typeName},`,
+                )
+                .join("\n")}
             }
             export type UnionsResolveToTypename = {
                 ${Array.from(unionTypeNames)
-                    .map(
-                        (typeName) =>
-                            `${typeName}: import("./${typeName}").${typeName}ResolveToTypename,`,
-                    )
-                    .join("\n")}
+                .map(
+                    (typeName) =>
+                        `${typeName}: import("./${typeName}").${typeName}ResolveToTypename,`,
+                )
+                .join("\n")}
             }
         `;
 
@@ -192,11 +192,11 @@ export class Generator {
                         regexUnionTypeImport.exec(args)?.[1];
                     const updatedResolveTypeWithBody = oldTypenameMatch
                         ? resolveTypeMatch
-                              .text()
-                              .replaceAll(
-                                  oldTypenameMatch.slice(1, -1),
-                                  pureOpTypeName,
-                              )
+                            .text()
+                            .replaceAll(
+                                oldTypenameMatch.slice(1, -1),
+                                pureOpTypeName,
+                            )
                         : resolveTypeMatch.text();
                     const range = resolveTypeMatch.range();
                     newCode =
@@ -276,11 +276,11 @@ export class Generator {
                 const oldTypenameMatch = regexUnionTypeImport.exec(args)?.[1];
                 const updatedResolveTypeWithBody = oldTypenameMatch
                     ? resolveTypeMatch
-                          .text()
-                          .replaceAll(
-                              oldTypenameMatch.slice(1, -1),
-                              pureOpTypeName,
-                          )
+                        .text()
+                        .replaceAll(
+                            oldTypenameMatch.slice(1, -1),
+                            pureOpTypeName,
+                        )
                     : resolveTypeMatch.text();
                 const range = resolveTypeMatch.range();
                 newCode =
