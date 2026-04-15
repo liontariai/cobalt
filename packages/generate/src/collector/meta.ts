@@ -648,17 +648,20 @@ export const gatherMetaFromFiles = async (
     // ======= post-processing =======
 
     if (notResolvableModules.length > 0) {
+        const uniqueNotResolvableModules = notResolvableModules.reduce((acc, m) => {
+            acc[m.moduleName] = m;
+            return acc;
+        }, {} as Record<string, { moduleName: string; fromPath?: string }>);
+
         const yellow = "\x1b[33m";
         const reset = "\x1b[0m";
         console.warn(`${yellow}--------------------------------${reset}`);
-        console.warn(
-            `${yellow}Could not resolve the following modules: ${notResolvableModules
-                .map(
-                    (m) =>
-                        `'${m.moduleName}' from '${m.fromPath?.includes("node_modules") ? m.fromPath.split("node_modules/").pop() : m.fromPath?.replace(path.resolve(serverDir, ".."), "")}'`,
-                )
-                .join(", ")}${reset}`,
-        );
+
+        for (const [moduleName, m] of Object.entries(uniqueNotResolvableModules)) {
+            console.warn(
+                `${yellow}Could not resolve the following module: ${moduleName} from '${m.fromPath?.includes("node_modules") ? m.fromPath.split("node_modules/").pop() : m.fromPath?.replace(path.resolve(serverDir, ".."), "")}'`,
+            );
+        }
         console.warn(
             `${yellow}You can most likely ignore these, but some types might have defaulted to 'any' instead of the correct type.${reset}`,
         );
@@ -666,35 +669,39 @@ export const gatherMetaFromFiles = async (
     }
 
     if (corruptedResolvers.length > 0) {
+        const corruptedResolversNames = corruptedResolvers.reduce((acc, r) => {
+            acc[r.resolverName] = r;
+            return acc;
+        }, {} as Record<string, { resolverName: string; error: string }>);
+
         const yellow = "\x1b[33m";
         const reset = "\x1b[0m";
         console.warn(`${yellow}--------------------------------${reset}`);
-        console.warn(
-            `${yellow}Corrupted resolvers: ${corruptedResolvers
-                .map((r) => r.resolverName)
-                .join(", ")}${reset}`,
-        );
-        console.warn(
-            `${yellow}Corrupted resolvers: ${corruptedResolvers
-                .map((r) => r.error)
-                .join("\n")}${reset}`,
-        );
+
+        for (const [resolverName, r] of Object.entries(corruptedResolversNames)) {
+            console.warn(
+                `${yellow}Corrupted resolver: ${resolverName} - ${r.error}`,
+            );
+        }
+
         console.warn(`${yellow}--------------------------------${reset}`);
     }
     if (corruptedTypes.length > 0) {
+        const corruptedTypesNames = corruptedTypes.reduce((acc, t) => {
+            acc[t.typeName] = t;
+            return acc;
+        }, {} as Record<string, { typeName: string; error: string }>);
+
         const red = "\x1b[31m";
         const reset = "\x1b[0m";
         console.warn(`${red}--------------------------------${reset}`);
-        console.warn(
-            `${red}Corrupted types: ${corruptedTypes
-                .map((t) => t.typeName)
-                .join(", ")}${reset}`,
-        );
-        console.warn(
-            `${red}Corrupted types: ${corruptedTypes
-                .map((t) => t.error)
-                .join("\n")}${reset}`,
-        );
+
+        for (const [typeName, t] of Object.entries(corruptedTypesNames)) {
+            console.warn(
+                `${red}Corrupted type: ${typeName} - ${t.error}`,
+            );
+        }
+        
         console.warn(`${red}--------------------------------${reset}`);
     }
 
