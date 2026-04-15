@@ -44,7 +44,9 @@ export const getOptions = (
             strict: true,
             // we are using 'this' for cobalt runtime helper functions and dont want to define it, so let's mute the ts error
             noImplicitThis: false,
-        },
+
+            allowImportingTsExtensions: true,
+        } satisfies ts.CompilerOptions,
     };
 };
 
