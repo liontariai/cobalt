@@ -33,19 +33,13 @@ export const getOptions = (
         throw new Error(message);
     }
 
+    const baseUrl = config.compilerOptions.baseUrl ?? (config.compilerOptions.paths?.["*"]?.[0] ?? ".");
+
     return {
         ...config,
         compilerOptions: {
             ...config.compilerOptions,
-            ...(config.compilerOptions.baseUrl
-                ? {
-                      baseUrl: path.resolve(
-                          path.dirname(maybeFile),
-                          config.compilerOptions.baseUrl,
-                      ),
-                  }
-                : {}),
-
+            baseUrl: path.resolve(path.dirname(maybeFile), baseUrl),
             // needed for correctly detecting null | undefined in types
             strict: true,
             // we are using 'this' for cobalt runtime helper functions and dont want to define it, so let's mute the ts error
