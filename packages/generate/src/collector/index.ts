@@ -1,5 +1,5 @@
 import { type TypeMeta } from "./types";
-export { type CodegenOptions, gatherMeta } from "./meta";
+export { type CodegenOptions, gatherMetaFromOperationsDir, gatherMetaFromFiles } from "./meta";
 
 /**
  * Collects all recursively collected information during the code generation process.

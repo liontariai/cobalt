@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { Collector, gatherMeta } from "./collector";
+import { Collector, gatherMetaFromOperationsDir } from "./collector";
 import { GeneratorSchemaGQL } from "./schema/graphql";
 import type { CodegenOptions, SchemaMeta, TypeMeta } from "./collector/types";
 
@@ -301,7 +301,7 @@ export class Generator {
         const unionsDir = path.join(serverDir, "unions");
 
         const collector = new Collector();
-        const schemaMeta = await gatherMeta(operationsDir, options, collector);
+        const schemaMeta = await gatherMetaFromOperationsDir(operationsDir, options, collector);
 
         const typesFiles = this.generateTSTypesFile(schemaMeta);
         this.syncUnionOperationResolveTypeFunctions(schemaMeta, {

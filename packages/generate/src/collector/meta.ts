@@ -19,7 +19,7 @@ export {
     type CodegenOptions,
 };
 
-import fs from "fs";
+import fs_module from "fs";
 import { Glob } from "bun";
 import { createProgram } from "./util";
 import {
@@ -110,19 +110,11 @@ const makeHelperTypes = (
     return "";
 };
 
-export const gatherMeta = async (
+export const gatherMetaFromOperationsDir = async (
     operationsDir: string,
     options: CodegenOptions,
     collector: Collector,
 ): Promise<SchemaMeta> => {
-    const meta: SchemaMeta = {
-        types: [],
-        operations: [],
-        customScalars: [],
-
-        extendedTypes: [],
-    };
-    const collectRenamedTypes = new Map<string, string>();
 
     operationsDir = path.resolve(operationsDir);
     const serverDir = path.resolve(operationsDir, "..");
@@ -152,7 +144,7 @@ export const gatherMeta = async (
     const typeFiles = new Glob(
         `${typesDir}/${options.typeFilesGlob ?? "**/*.ts"}`,
     );
-    if (fs.existsSync(typesDir)) {
+    if (fs_module.existsSync(typesDir)) {
         try {
             files.push(...typeFiles.scanSync());
         } catch (e) {}
@@ -200,8 +192,78 @@ export const gatherMeta = async (
             }
         },
     );
+
+    return await gatherMetaFromFiles(files, operationsDir, typesDir, options, collector, program, notResolvableModules);
+}
+
+export const gatherMetaFromFiles = async (
+    files: string[],
+    operationsDir: string,
+    typesDir: string,
+    options: CodegenOptions,
+    collector: Collector,
+    program?: ts.Program,
+    notResolvableModules?: {
+        moduleName: string;
+        fromPath?: string;
+    }[],
+    fs?: { readFileSync: ((path: string, encoding?: string) => string) | typeof fs_module.readFileSync; existsSync: (path: string) => boolean | typeof fs_module.existsSync }
+): Promise<SchemaMeta> => {
+    fs = fs ?? { readFileSync: fs_module.readFileSync, existsSync: fs_module.existsSync };
+
+    const serverDir = path.resolve(operationsDir, "..");
+
+    notResolvableModules = notResolvableModules ?? [];
+    if (!program) {
+        program = createProgram(
+            files,
+            serverDir,
+            (fileName) => makeHelperTypes(fileName, operationsDir, typesDir),
+            (error) => {
+                const message = error.message;
+                if (
+                    message.includes("Cannot find module") ||
+                    message.includes("Cannot find package")
+                ) {
+                    const [_, __, ___, moduleName, fromPath]: string[] =
+                        message.match(
+                            /(.*?)(Cannot find module|Cannot find package) '([^']+)' from '([^']+)(.*)/,
+                        ) ?? [];
+                    if (
+                        ![".cobalt/auth/oauth", ".cobalt/auth/sdk"].includes(
+                            moduleName,
+                        ) &&
+                        !fromPath.endsWith("$$types/index.ts") &&
+                        !fromPath.includes("node_modules/@types/node") &&
+                        !fromPath.includes("node_modules/bun-types")
+                    ) {
+                        notResolvableModules.push({ moduleName, fromPath });
+                    }
+                } else if (message.includes("No such built-in module:")) {
+                    const [_, __, moduleName]: string[] =
+                        message.match(/(.*?)No such built-in module: (.*)$/) ?? [];
+
+                    if (!moduleName.includes("node:")) {
+                        notResolvableModules.push({
+                            moduleName,
+                        });
+                    }
+                } else {
+                    console.error(error);
+                }
+            },
+        )
+    }
     const checker = program.getTypeChecker();
 
+    const meta: SchemaMeta = {
+        types: [],
+        operations: [],
+        customScalars: [],
+
+        extendedTypes: [],
+    };
+    const collectRenamedTypes = new Map<string, string>();
     const corruptedResolvers: {
         resolverName: string;
         error: string;
