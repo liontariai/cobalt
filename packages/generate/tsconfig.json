@@ -32,8 +32,8 @@
         "forceConsistentCasingInFileNames": true,
         "types": ["bun-types"],
         "rootDir": ".",
-        "baseUrl": ".",
         "paths": {
+            "*": ["./*"],
             "@/*": ["./src/*"],
             "@tests/*": ["./tests/*"]
         }
