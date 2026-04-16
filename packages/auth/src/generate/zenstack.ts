@@ -177,8 +177,8 @@ export const makeIdentityManagementPlatform = async ({
                 // we are using 'this' for cobalt runtime helper functions and dont want to define it, so let's mute the ts error
                 "noImplicitThis": false,
 
-                "baseUrl": ".",
                 "paths": {
+                    "*": ["./*"],
                     "@/*": ["server/*"],
                     "$$ctx": ["server/ctx.ts"],
                     "$$types": ["server/$$types/index.ts"]
