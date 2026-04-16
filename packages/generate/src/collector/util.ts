@@ -33,7 +33,10 @@ export const getOptions = (
         throw new Error(message);
     }
 
-    const baseUrl = config.compilerOptions.baseUrl ?? (config.compilerOptions.paths?.["*"]?.[0] ?? ".");
+    let baseUrl = config.compilerOptions.baseUrl ?? (config.compilerOptions.paths?.["*"]?.[0] ?? ".");
+    if (baseUrl === "./*") {
+        baseUrl = ".";
+    }
 
     return {
         ...config,
