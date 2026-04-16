@@ -3,7 +3,7 @@ import path from "path";
 
 import { Collector, gatherMetaFromOperationsDir } from "./collector";
 import { GeneratorSchemaGQL } from "./schema/graphql";
-import type { CodegenOptions, SchemaMeta, TypeMeta } from "./collector/types";
+import type { CodegenOptions, OperationMeta, SchemaMeta, TypeMeta } from "./collector/types";
 
 import { parse, Lang } from "@ast-grep/napi";
 export class Generator {
@@ -314,9 +314,9 @@ export class Generator {
         const extTypesImports: string[] = [];
         const unionTypesImports: string[] = [];
 
-        const queries: string[] = [];
-        const mutations: string[] = [];
-        const subscriptions: string[] = [];
+        const queries: Map<string, OperationMeta> = new Map();
+        const mutations: Map<string, OperationMeta> = new Map();
+        const subscriptions: Map<string, OperationMeta> = new Map();
         const extendedTypes: string[] = [];
 
         const unionTypes: { typeName: string; importName: string }[] = [];
@@ -326,11 +326,11 @@ export class Generator {
                 `import { ${operation.operation} as ${operation.name} } from "${path.resolve(operationsDir, operation.file)}";`,
             );
             if (operation.operation === "Query") {
-                queries.push(operation.name);
+                queries.set(operation.name, operation);
             } else if (operation.operation === "Mutation") {
-                mutations.push(operation.name);
+                mutations.set(operation.name, operation);
             } else if (operation.operation === "Subscription") {
-                subscriptions.push(operation.name);
+                subscriptions.set(operation.name, operation);
             }
         }
 
@@ -400,26 +400,26 @@ export class Generator {
         }
 
         const Query = `export const Query = {
-            ${queries
+            ${Array.from(queries.entries())
                 .map(
-                    (name) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}")`,
+                    ([name, operation]) =>
+                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ") }}` : "{}"})`,
                 )
                 .join(",\n")}
         };`;
         const Mutation = `export const Mutation = {
-            ${mutations
+            ${Array.from(mutations.entries())
                 .map(
-                    (name) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}")`,
+                    ([name, operation]) =>
+                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ") }}` : "{}"})`,
                 )
                 .join(",\n")}
         };`;
         const Subscription = `export const Subscription = {
-            ${subscriptions
+            ${Array.from(subscriptions.entries())
                 .map(
-                    (name) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", true)`,
+                    ([name, operation]) =>
+                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ") }}` : "{}"}, true)`,
                 )
                 .join(",\n")}
         };`;
@@ -449,11 +449,11 @@ export class Generator {
             ...opsImports,
             ...extTypesImports,
             ...unionTypesImports,
-            queries.length && Query,
-            mutations.length && Mutation,
-            subscriptions.length && Subscription,
-            extendedTypes.length && ExtendedTypes,
-            unionTypes.length && UnionTypes,
+            queries.size > 0 && Query,
+            mutations.size > 0 && Mutation,
+            subscriptions.size > 0 && Subscription,
+            extendedTypes.length > 0 && ExtendedTypes,
+            unionTypes.length > 0 && UnionTypes,
         ]
             .filter(Boolean)
             .join("\n");

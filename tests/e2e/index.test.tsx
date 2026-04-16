@@ -2164,3 +2164,62 @@ describe("Frontend Integration", () => {
         });
     });
 });
+
+describe("Edge Cases", () => {
+    describe("Arguments", () => {
+        test("order of arguments always matches resolver function", async () => {
+            const _sdk = (await import("./tests/.sdks/tests.args-order").catch(console.error))?.default;
+            (await makeHandlerFromDir("./tests/args-order"))(_sdk);
+
+            if (!_sdk) return;
+
+            const sdk = _sdk;
+
+            const makePair = ({A, Z, D, B}: {A?: string, Z?: string, D?: string, B?: string}) => ({in: {A, Z, D, B}, out: `A: ${A}, Z: ${Z}, D: ${D}, B: ${B}`});
+
+            const t1 = makePair({A: "A", Z: "Z", D: "D", B: "B"});
+            const result = await sdk.query.string({
+                A: t1.in.A,
+                Z: t1.in.Z,
+                D: t1.in.D,
+                B: t1.in.B,
+            });
+            expect(result).toBe(t1.out);
+
+            const t2 = makePair({A: "A", D: "D", B: "B"});
+            const result2 = await sdk.query.string({
+                A: t2.in.A,
+                D: t2.in.D,
+                B: t2.in.B,
+            });
+            expect(result2).toBe(t2.out);
+
+            const t3 = makePair({Z: "Z", D: "D", B: "B"});
+            const result3 = await sdk.query.string({
+                Z: t3.in.Z,
+                D: t3.in.D,
+                B: t3.in.B,
+            });
+            expect(result3).toBe(t3.out);
+
+            const t4 = makePair({Z: "Z", D: "D"});
+            const result4 = await sdk.query.string({
+                Z: t4.in.Z,
+                D: t4.in.D,
+            });
+            expect(result4).toBe(t4.out);
+
+            const t5 = makePair({Z: "Z"});
+            const result5 = await sdk.query.string({
+                Z: t5.in.Z,
+            });
+            expect(result5).toBe(t5.out);
+
+            const t6 = makePair({});
+            const result6 = await sdk.query.string({});
+            expect(result6).toBe(t6.out);
+
+        });
+    });
+});
+
