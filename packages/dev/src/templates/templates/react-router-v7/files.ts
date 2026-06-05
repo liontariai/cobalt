@@ -34,21 +34,19 @@ import {
     Scripts,
     ScrollRestoration,
 } from "react-router";
-${config.withAuth ? `import { makeAuthLoader, getAuthToken } from "@cobalt27/auth/react/rr7";` : ""}
+${config.withAuth ? `import { makeAuthLoader, accessTokenFromCookie } from "@cobalt27/auth/react/rr7";` : ""}
 import sdk from "sdk";
 
 import "./app.css";
-${
-    config.withAuth
-        ? `sdk.init({
-    auth: getAuthToken,
+${config.withAuth
+            ? `sdk.init({
+    auth: accessTokenFromCookie,
 });`
-        : ""
-}
+            : ""
+        }
 
-${
-    config.withAuth
-        ? `
+${config.withAuth
+            ? `
 export const loader = makeAuthLoader(
     {
         clientID: "client_id", // name your client id here
@@ -69,8 +67,8 @@ export const loader = makeAuthLoader(
         });
     }
 );`
-        : ""
-}
+            : ""
+        }
 
 export const links: Route.LinksFunction = () => [
     { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -153,18 +151,17 @@ export default [index("routes/home.tsx")] satisfies RouteConfig;
 import sdk from "sdk";
 import { useLoaderData } from "react-router";
 
-${
-    config.withAuth
-        ? `// this is executed server side, the auth token is already set via the
+${config.withAuth
+            ? `// this is executed server side, the auth token is already set via the
 // makeAuthLoader function in the root.tsx file
 // you can also use a clientLoader function to make the query client side
 // for that the auth token is also set because of the \`sdk.init\` function in the root.tsx file
 // it uses the \`getAuthToken\` function to get the auth token. Client side it reads the \`accessToken\` cookie
 // and server side it reads the \`accessToken\` cookie from the request headers`
-        : ""
-}
+            : ""
+        }
 export async function loader() {
-    const profile = await sdk.query.profile((s) => s.$all({}));
+    const profile = await sdk.query.profile();
     return { profile };
 }
 
