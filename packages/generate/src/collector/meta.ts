@@ -364,9 +364,11 @@ export const gatherMetaFromFiles = async (
             );
 
             if (__typename && __typename.type.isEnum) {
+                const rawTypeName = __typename.type.enumValues[0].name;
+
                 const finalTypeName =
                     Array(ret.type.isList).fill("[").join("") +
-                    __typename.type.enumValues[0].name +
+                    rawTypeName +
                     Array(ret.type.isList).fill("]").join("");
 
                 const ref = [...resolverMeta.path, "return"].join(".");
@@ -387,6 +389,14 @@ export const gatherMetaFromFiles = async (
                 // collector.removeType(ret.type.name);
                 ret.type.name = finalTypeName;
                 collector.addType(ret.type);
+
+                if (ret.type.isList) {
+                    collector.addType({
+                        ...ret.type,
+                        isList: 0,
+                        name: rawTypeName,
+                    });
+                }
             }
 
             meta.operations.push({
@@ -702,7 +712,7 @@ export const gatherMetaFromFiles = async (
                 `${red}Corrupted type: ${typeName} - ${t.error}`,
             );
         }
-        
+
         console.warn(`${red}--------------------------------${reset}`);
     }
 
