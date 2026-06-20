@@ -3,7 +3,8 @@
     "license": "SSPL-1.0",
     "scripts": {
         "format": "prettier --write .",
-        "publish:all": "cd packages/runtime && bun publish && cd ../generate && bun publish && cd ../auth && bun publish && cd ../dev && bun publish && cd .."
+        "publish:all": "cd packages/runtime && bun publish && cd ../generate && bun publish && cd ../auth && bun publish && cd ../dev && bun publish && cd ..",
+        "bundle:all": "cd packages/runtime && bun bundle && cd ../generate && bun bundle && cd ../dev && bun bundle && cd .."
     },
     "devDependencies": {
         "@types/bun": "latest",
