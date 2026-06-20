@@ -46,8 +46,8 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
                 `
     [${new Date().toLocaleString()}]
     ${fieldName}(${Object.entries(args)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(", ")})
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(", ")})
             `,
             ] as const;
         }
@@ -78,7 +78,7 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
                 const that = await makeAuthedCTX(context);
 
                 const argsInOrder = Array.from({ length: Object.keys(argsMap).length });
-                for (const argName in argsMap){
+                for (const argName in argsMap) {
                     argsInOrder[argsMap[argName]] = args[argName];
                 }
 
@@ -86,12 +86,16 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
                     ...(argsInOrder as A),
                 ) as AsyncGenerator<T, any, any>;
 
-                for await (const item of asyncGen) {
-                    yield { [fieldName]: item };
-                    if (t0 && logStart) {
-                        const logEnd = debugLogEnd(t0, logStart, item);
-                        console.debug("\x1b[34m%s\x1b[0m", logEnd);
+                try {
+                    for await (const item of asyncGen) {
+                        yield { [fieldName]: item };
+                        if (t0 && logStart) {
+                            const logEnd = debugLogEnd(t0, logStart, item);
+                            console.debug("\x1b[34m%s\x1b[0m", logEnd);
+                        }
                     }
+                } finally {
+                    await asyncGen.return(undefined);
                 }
             },
         };
@@ -109,7 +113,7 @@ export const makeGraphQLResolverFn = <T, A extends any[]>(
         const that = await makeAuthedCTX(context);
 
         const argsInOrder = Array.from({ length: Object.keys(argsMap).length });
-        for (const argName in argsMap){
+        for (const argName in argsMap) {
             argsInOrder[argsMap[argName]] = args[argName];
         }
 
