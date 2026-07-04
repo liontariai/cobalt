@@ -18,8 +18,8 @@ export function Query(): SearchResult {
 // Your resolver returns a Union Type. Therefore you must provide a resolveType function that resolves the abstract union type to a concrete type by it's typename.
 // The following fully-typed template has been added by cobalt. Please make sure it resolves correctly, like the types indicate.
 Query.resolveType = (
-    value: $$types.Unions["_title_string_description_string_url_string_"],
-): $$types.UnionsResolveToTypename["_title_string_description_string_url_string_"] => {
+    value: $$types.Unions["_title_string_description_stri_f547ef8d"],
+): $$types.UnionsResolveToTypename["_title_string_description_stri_f547ef8d"] => {
     if ("url" in value) {
         return "_url_string_";
     }

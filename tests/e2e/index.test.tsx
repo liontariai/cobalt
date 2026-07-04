@@ -1008,10 +1008,10 @@ describe("Basic", () => {
                     const sdk = _sdk;
 
                     const urlResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: true })(({ $on }) => ({
-                        ...$on._value_url_string_title_undefined_description_undefined_(({ value }) => ({ value: value(({ url }) => ({ url })) })),
+                        ...$on._value_url_string_title_undefi_0cee9700(({ value }) => ({ value: value(({ url }) => ({ url })) })),
                     }));
                     const titleResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: false })(({ $on }) => ({
-                        ...$on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                        ...$on._value_title_string_descriptio_a7ce4c54(({ value }) => ({
                             value: value(({ title, description }) => ({ title, description })),
                         })),
                     }));
@@ -1032,15 +1032,15 @@ describe("Basic", () => {
                     const sdk = _sdk;
 
                     const urlResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: true })(({ $on }) => ({
-                        alias1: $on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                        alias1: $on._value_url_string_title_undefi_0cee9700(({ value }) => ({
                             value: value(({ url }) => ({ url })),
                         })),
-                        alias2: $on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                        alias2: $on._value_url_string_title_undefi_0cee9700(({ value }) => ({
                             value: value(({ url }) => ({ url })),
                         })),
                     }));
                     const titleResult = await sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: false })(({ $on }) => ({
-                        alias1: $on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                        alias1: $on._value_title_string_descriptio_a7ce4c54(({ value }) => ({
                             value: value(({ title, description }) => ({ title, description })),
                         })),
                     }));
@@ -1130,12 +1130,12 @@ describe("Basic", () => {
                         const _ = _sdk._;
 
                         const urlResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
-                            ...$on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                            ...$on._value_url_string_title_undefi_0cee9700(({ value }) => ({
                                 value: value(({ url }) => ({ url })),
                             })),
                         })).$lazy;
                         const titleResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
-                            ...$on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                            ...$on._value_title_string_descriptio_a7ce4c54(({ value }) => ({
                                 value: value(({ title, description }) => ({ title, description })),
                             })),
                         })).$lazy;
@@ -1157,12 +1157,12 @@ describe("Basic", () => {
                         const _ = _sdk._;
 
                         const urlResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
-                            alias1: $on._value_url_string_title_undefined_description_undefined_(({ value }) => ({
+                            alias1: $on._value_url_string_title_undefi_0cee9700(({ value }) => ({
                                 value: value(({ url }) => ({ url })),
                             })),
                         })).$lazy;
                         const titleResult = sdk.query.gqlUnionsInObjWithArgsSimple({ returnUrl: _ })(({ $on }) => ({
-                            alias1: $on._value_title_string_description_string_url_undefined_(({ value }) => ({
+                            alias1: $on._value_title_string_descriptio_a7ce4c54(({ value }) => ({
                                 value: value(({ title, description }) => ({ title, description })),
                             })),
                         })).$lazy;
