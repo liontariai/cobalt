@@ -1,6 +1,6 @@
 {
     "name": "@cobalt27/auth",
-    "version": "0.5.23",
+    "version": "0.5.24",
     "module": "src/index.ts",
     "main": "src/index.ts",
     "type": "module",
