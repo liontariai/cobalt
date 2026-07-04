@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { createInlineProgram } from "./collector/util";
+import { createInlineProgram } from "../collector/util";
 
 export const resolveTypeWithSource = <
     const R extends {

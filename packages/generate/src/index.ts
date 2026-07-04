@@ -4,6 +4,7 @@ import path from "path";
 import { Collector, gatherMetaFromOperationsDir } from "./collector";
 import { GeneratorSchemaGQL } from "./schema/graphql";
 import type { CodegenOptions, OperationMeta, SchemaMeta, TypeMeta } from "./collector/types";
+import { normalizeTypename } from "./utils/typename";
 
 import { parse, Lang } from "@ast-grep/napi";
 export class Generator {
@@ -34,6 +35,8 @@ export class Generator {
         };
 
         for (const extType of schemaMeta.extendedTypes) {
+            extType.name = normalizeTypename(extType.name);
+
             const fieldDefs = makeTypeFields(extType);
             const tsTypeFileContent = `
                 ${extType.description ? `/*\n${extType.description}\n*/` : ""}
@@ -49,7 +52,11 @@ export class Generator {
         for (const unionType of schemaMeta.types.filter((t) => t.isUnion)) {
             if (unionType.isInput) continue;
 
+            unionType.name = normalizeTypename(unionType.name);
+
             const makeTypeFile = (type: TypeMeta) => {
+                type.name = normalizeTypename(type.name);
+
                 const types: string[] = [];
                 const fieldDefs = makeTypeFields(type);
                 const tsTypeFileContent = `
@@ -133,10 +140,7 @@ export class Generator {
                     (pt) => pt.isScalar || pt.isEnum,
                 )
             ) {
-                const pureOpTypeName = operation.type.name
-                    .replaceAll("!", "")
-                    .replaceAll("[", "")
-                    .replaceAll("]", "");
+                const pureOpTypeName = normalizeTypename(operation.type.name);
                 const code = fs.readFileSync(operation.file, "utf-8");
                 const ast = parse(Lang.TypeScript, code);
                 const root = ast.root();
@@ -238,10 +242,7 @@ export class Generator {
 
             const $$typesSymbol = options.$$typesSymbol ?? 'import("$$types")';
 
-            const pureOpTypeName = unionType.name
-                .replaceAll("!", "")
-                .replaceAll("[", "")
-                .replaceAll("]", "");
+            const pureOpTypeName = normalizeTypename(unionType.name);
             const code = fs.readFileSync(file, "utf-8");
             const ast = parse(Lang.TypeScript, code);
             const root = ast.root();
@@ -343,10 +344,9 @@ export class Generator {
                 !o.type.isInput &&
                 !o.type.possibleTypes.some((pt) => pt.isScalar || pt.isEnum),
         )) {
-            const typeName = unionOperation.type.name
-                .replaceAll("!", "")
-                .replaceAll("[", "")
-                .replaceAll("]", "");
+            const typeName = normalizeTypename(unionOperation.type.name);
+
+            if (unionOps.has(typeName)) continue;
             unionOps.add(typeName);
 
             const importName = `U_${unionOperation.operation}_${typeName}`;
@@ -366,11 +366,10 @@ export class Generator {
                 !t.isInput &&
                 !t.possibleTypes.some((pt) => pt.isScalar || pt.isEnum),
         )) {
-            const typeName = unionType.name
-                .replaceAll("!", "")
-                .replaceAll("[", "")
-                .replaceAll("]", "");
+            const typeName = normalizeTypename(unionType.name);
+
             if (unionOps.has(typeName)) continue;
+            unionOps.add(typeName);
 
             const filename = path.join(unionsDir, `${typeName}.ts`);
             this.syncUnionTypeResolveTypeFunction(unionType, filename, {
@@ -403,7 +402,7 @@ export class Generator {
             ${Array.from(queries.entries())
                 .map(
                     ([name, operation]) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ") }}` : "{}"})`,
+                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"})`,
                 )
                 .join(",\n")}
         };`;
@@ -411,7 +410,7 @@ export class Generator {
             ${Array.from(mutations.entries())
                 .map(
                     ([name, operation]) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ") }}` : "{}"})`,
+                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"})`,
                 )
                 .join(",\n")}
         };`;
@@ -419,7 +418,7 @@ export class Generator {
             ${Array.from(subscriptions.entries())
                 .map(
                     ([name, operation]) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ") }}` : "{}"}, true)`,
+                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"}, true)`,
                 )
                 .join(",\n")}
         };`;

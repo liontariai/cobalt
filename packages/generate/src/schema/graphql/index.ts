@@ -3,6 +3,7 @@ import type {
     SchemaMeta,
     TypeMeta,
 } from "../../collector/types";
+import { normalizeTypename, purifyTypename, shortenTypename } from "../../utils/typename";
 
 export class GeneratorSchemaGQL {
     public static ScalarTypeMap: Map<string, string> = new Map([
@@ -13,7 +14,7 @@ export class GeneratorSchemaGQL {
     public ScalarTypeMap: Map<string, string> =
         GeneratorSchemaGQL.ScalarTypeMap;
 
-    constructor(private readonly schemaMeta: SchemaMeta) {}
+    constructor(private readonly schemaMeta: SchemaMeta) { }
 
     public makeScalarTypes(): string {
         const scalars: string[] = [];
@@ -27,7 +28,7 @@ export class GeneratorSchemaGQL {
                 !typeMeta.parentType?.isUnion &&
                 !["ID", "Int", "String", "Boolean", "Float"].includes(
                     this.ScalarTypeMap.get(typeMeta.name.replaceAll("!", "")) ??
-                        typeMeta.name,
+                    typeMeta.name,
                 )
             ) {
                 scalars.push(
@@ -47,8 +48,7 @@ export class GeneratorSchemaGQL {
             if (typeMeta.isEnum) {
                 let name = typeMeta.name;
 
-                name = name.replaceAll("[", "").replaceAll("]", "");
-                name = name.replaceAll("!", "");
+                name = normalizeTypename(name);
 
                 const enumValueTypeDefs = typeMeta.enumValues
                     .map((v) =>
@@ -67,8 +67,8 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                     """
                     enum ${name} {
                         ${typeMeta.enumValues
-                            .map((value) => `${value.name}`)
-                            .join("\n")}
+                        .map((value) => `${value.name}`)
+                        .join("\n")}
                     }`,
                 );
             }
@@ -82,10 +82,11 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
             return "";
         }
 
-        let name = typeMeta.name.replaceAll("!", "");
-        name = typeMeta.isList
-            ? name.replaceAll("[", "").replaceAll("]", "")
-            : name;
+        let name = typeMeta.isList
+            ? purifyTypename(typeMeta.name)
+            : typeMeta.name.replaceAll("!", "");
+
+        name = shortenTypename(name);
 
         const typedef = `@typedef {${typeMeta.scalarTSType}} ${name}`;
         this._typedefMap.set(name, typedef);
@@ -105,18 +106,20 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
     }
     private typeMetaNameToGqlTypeName(typeMeta: TypeMeta): string {
         let name = typeMeta.isList
-            ? `${typeMeta.name.replaceAll("[", "").replaceAll("]", "")}`
+            ? purifyTypename(typeMeta.name)
             : typeMeta.name;
 
-        name = this.ScalarTypeMap.get(name.replaceAll("!", "")) ?? name;
-        name = typeMeta.isNonNull && !name.endsWith("!") ? `${name}!` : name;
+        name = this.ScalarTypeMap.get(purifyTypename(name)) ?? name;
+
+        name = shortenTypename(purifyTypename(name));
+        name = typeMeta.isNonNull ? `${name}!` : name;
 
         return typeMeta.isList
             ? `${Array(typeMeta.isList).fill("[").join("")}${name}${Array(
-                  typeMeta.isList,
-              )
-                  .fill("]")
-                  .join("")}`
+                typeMeta.isList,
+            )
+                .fill("]")
+                .join("")}`
             : name;
     }
 
@@ -124,10 +127,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         const inputs: string[] = [];
         for (const typeMeta of this.schemaMeta.types) {
             if (typeMeta.isInput && !typeMeta.isUnion) {
-                let name = typeMeta.name;
-                // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
-                name = name.replaceAll("[", "").replaceAll("]", "");
-                name = name.replaceAll("!", "");
+                let name = normalizeTypename(typeMeta.name);
 
                 const fieldDefs: string[] = [];
                 for (const field of typeMeta.inputFields) {
@@ -153,10 +153,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         const objects: string[] = [];
         for (const typeMeta of this.schemaMeta.types) {
             if (typeMeta.isObject) {
-                let name = typeMeta.name;
-                // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
-                name = name.replaceAll("[", "").replaceAll("]", "");
-                name = name.replaceAll("!", "");
+                let name = normalizeTypename(typeMeta.name);
 
                 if (typeMeta.fields.length === 0) {
                     if (!typeMeta.isUnion) {
@@ -204,11 +201,7 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
         const typedef = this.getOrMakeTypedef(typeMeta);
         if (!typedef.length) return "";
 
-        let typeName = typeMeta.name;
-
-        typeName = typeName.replaceAll("!", "");
-        // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
-        typeName = typeName.replaceAll("[", "").replaceAll("]", "");
+        let typeName = normalizeTypename(typeMeta.name);
 
         return `
         """
@@ -232,30 +225,22 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
                         this.createCustomScalarType(
                             typeMeta,
                             typeMeta.description ??
-                                "A custom scalar type that represents a union of input types, which is not supported by GraphQL natively.",
+                            "A custom scalar type that represents a union of input types, which is not supported by GraphQL natively.",
                         ),
                     );
                 } else {
-                    let name = typeMeta.name;
-
-                    name = name.replaceAll("!", "");
-                    // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
-                    name = name.replaceAll("[", "").replaceAll("]", "");
+                    let name = normalizeTypename(typeMeta.name);
 
                     unions.push(
                         `${typeMeta.description ? `"""\n${typeMeta.description}\n"""` : ""}
                         union ${name} = ${typeMeta.possibleTypes
                             .map((type) => {
-                                let n =
+                                const n =
                                     this.ScalarTypeMap.get(
                                         type.name.replaceAll("!", ""),
                                     ) ?? type.name.replaceAll("!", "");
 
-                                n = n.replaceAll("!", "");
-                                // remove list brackets from name, the array is handled (hoisted) to the prop that uses it
-                                n = n.replaceAll("[", "").replaceAll("]", "");
-
-                                return n;
+                                return normalizeTypename(n);
                             })
                             .join(" | ")}`,
                     );
@@ -273,21 +258,19 @@ ${enumValueTypeDefs.length ? `@type {${name}}` : ""}
             (operation) =>
                 [
                     operation,
-                    `${operation.description ? `"""\n${operation.description}\n"""` : ""}${operation.name}${
-                        operation.args.length
-                            ? `(${operation.args
-                                  .map(
-                                      (arg) =>
-                                          `${
-                                              arg.description
-                                                  ? `"""\n${arg.description}\n"""`
-                                                  : ""
-                                          }${arg.name}: ${this.typeMetaNameToGqlTypeName(
-                                              arg.type,
-                                          )}\n`,
-                                  )
-                                  .join(", ")})`
-                            : ""
+                    `${operation.description ? `"""\n${operation.description}\n"""` : ""}${operation.name}${operation.args.length
+                        ? `(${operation.args
+                            .map(
+                                (arg) =>
+                                    `${arg.description
+                                        ? `"""\n${arg.description}\n"""`
+                                        : ""
+                                    }${arg.name}: ${this.typeMetaNameToGqlTypeName(
+                                        arg.type,
+                                    )}\n`,
+                            )
+                            .join(", ")})`
+                        : ""
                     }: ${this.typeMetaNameToGqlTypeName(operation.type)}`,
                 ] as [OperationMeta, string],
         );

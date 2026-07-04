@@ -1,4 +1,4 @@
-import { resolveTypeWithSource } from "@cobalt27/generate/src/helpers";
+import { resolveTypeWithSource } from "@cobalt27/generate/src/utils/typescript";
 
 import { createClient, type VerifyOptions } from "@openauthjs/openauth/client";
 import { issuer } from "@openauthjs/openauth";
