@@ -7,7 +7,7 @@ import path from "path";
 import { findNodeModulesDir } from "./helpers";
 import fs from "fs";
 
-let lastRootBypassToken = "";
+let lastRootBypassToken = crypto.randomUUID();
 export const rootBypassTokenFactory = () => {
     const token = crypto.randomUUID();
     lastRootBypassToken = token;
