@@ -1642,6 +1642,45 @@ describe("Basic", () => {
         });
     });
 
+    describe("Multi-op exports", () => {
+        test("Query + Mutation, Query + Subscription, Mutation + Subscription, and all three", async () => {
+            const configure = await makeHandlerFromDir("./tests/multi-op", {
+                operationFilesGlob: "*.ts",
+                typeFilesGlob: "*.ts",
+            });
+            const _sdk = (await import("./tests/.sdks/tests.multi-op").catch(console.error))?.default;
+            configure(_sdk);
+            if (!_sdk) return;
+
+            const sdk = _sdk;
+
+            expect(await sdk.query.queryMutation).toBe("qm-query");
+            expect(await sdk.mutation.queryMutation).toBe("qm-mutation");
+
+            expect(await sdk.query.querySubscription).toBe("qs-query");
+            const qsSub: string[] = [];
+            for await (const value of await sdk.subscription.querySubscription) {
+                qsSub.push(value);
+            }
+            expect(qsSub).toEqual(["qs-sub"]);
+
+            expect(await sdk.mutation.mutationSubscription).toBe("ms-mutation");
+            const msSub: string[] = [];
+            for await (const value of await sdk.subscription.mutationSubscription) {
+                msSub.push(value);
+            }
+            expect(msSub).toEqual(["ms-sub"]);
+
+            expect(await sdk.query.queryMutationSubscription).toBe("qms-query");
+            expect(await sdk.mutation.queryMutationSubscription).toBe("qms-mutation");
+            const qmsSub: string[] = [];
+            for await (const value of await sdk.subscription.queryMutationSubscription) {
+                qmsSub.push(value);
+            }
+            expect(qmsSub).toEqual(["qms-sub"]);
+        });
+    });
+
     describe("Nested", () => {
         describe("Root fields", () => {
             test("No args", async () => {
