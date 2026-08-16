@@ -39,7 +39,7 @@ const camelCase = (parts: string[]) => {
 };
 
 const RE_OPERATION_TYPE =
-    /export (async )?function(\*)? (Query|Mutation|Subscription)/;
+    /export (async )?function(\*)? (Query|Mutation|Subscription)/g;
 
 const makeHelperTypes = (
     filename: string,
@@ -64,18 +64,33 @@ const makeHelperTypes = (
             Subscription: Extract<exportedKeys, "Subscription"> extends "Subscription" ? typeof F["Subscription"] : never;
         }
 
-        type Op = Ops[Extract<exportedKeys, keyof Ops>];
-
-        type Args = Parameters<Op>;
-        type Ret = Awaited<ReturnType<Op>> extends AsyncGenerator<infer T, any, any> ? T : Awaited<ReturnType<Op>>;
+        type QueryOp = Ops["Query"];
+        type QueryArgs = Parameters<QueryOp>;
+        type QueryRet = Awaited<ReturnType<QueryOp>> extends AsyncGenerator<infer T, any, any> ? T : Awaited<ReturnType<QueryOp>>;
+        type MutationOp = Ops["Mutation"];
+        type MutationArgs = Parameters<MutationOp>;
+        type MutationRet = Awaited<ReturnType<MutationOp>> extends AsyncGenerator<infer T, any, any> ? T : Awaited<ReturnType<MutationOp>>;
+        type SubscriptionOp = Ops["Subscription"];
+        type SubscriptionArgs = Parameters<SubscriptionOp>;
+        type SubscriptionRet = Awaited<ReturnType<SubscriptionOp>> extends AsyncGenerator<infer T, any, any> ? T : Awaited<ReturnType<SubscriptionOp>>;
 
         type __typename = Extract<exportedKeys, "__typename"> extends "__typename"
             ? typeof F.__typename
             : never;
 
-        type RESOLVER = {
-            args: Args;
-            return: Ret;
+        type QueryRESOLVER = {
+            args: QueryArgs;
+            return: QueryRet;
+            __typename: __typename;
+        };
+        type MutationRESOLVER = {
+            args: MutationArgs;
+            return: MutationRet;
+            __typename: __typename;
+        };
+        type SubscriptionRESOLVER = {
+            args: SubscriptionArgs;
+            return: SubscriptionRet;
             __typename: __typename;
         };
         `;
@@ -295,11 +310,13 @@ export const gatherMetaFromFiles = async (
 
         if (fileType === "unknown") continue;
         if (fileType === "operation") {
-            const operationType = content.match(RE_OPERATION_TYPE)?.[3] as
-                | OperationType
-                | undefined;
+            const operationTypes = new Set(
+                [...content.matchAll(RE_OPERATION_TYPE)].map(
+                    (m) => m[3] as OperationType,
+                ),
+            );
 
-            if (!operationType) continue;
+            if (!operationTypes.size) continue;
 
             const sourceFile = program.getSourceFile(
                 `${file}._cobalt_generator_types.ts`,
@@ -318,117 +335,122 @@ export const gatherMetaFromFiles = async (
                 ts.SymbolFlags.All,
             );
 
-            const resolverName = `${operationType}::${file.replace(".ts", "")}`;
-            const resolverSymbol = symbols.find((s) => s.name === "RESOLVER")!;
-            const resolverType =
-                checker.getDeclaredTypeOfSymbol(resolverSymbol);
+            for (const operationType of operationTypes) {
+                const resolverTypeName = `${operationType}RESOLVER`;
+                const resolverName = `${operationType}::${file.replace(".ts", "")}`;
+                const resolverSymbol = symbols.find(
+                    (s) => s.name === resolverTypeName,
+                )!;
+                const resolverType =
+                    checker.getDeclaredTypeOfSymbol(resolverSymbol);
 
-            let resolverMeta: TypeMeta | undefined;
-            try {
-                resolverMeta = gatherMetaForType(
-                    "",
-                    { type: resolverType, symbol: resolverSymbol },
-                    {
-                        checker,
-                        sourceFile,
-                        rawCodeSourceFile: originalSourceFile,
-                    },
-                    collector,
-                    collectRenamedTypes,
-                    [`${resolverName}:`],
-                );
-            } catch (e) {
-                collector.removeType("RESOLVER");
-                collector.removeType("RESOLVER!");
+                let resolverMeta: TypeMeta | undefined;
+                try {
+                    resolverMeta = gatherMetaForType(
+                        "",
+                        { type: resolverType, symbol: resolverSymbol },
+                        {
+                            checker,
+                            sourceFile,
+                            rawCodeSourceFile: originalSourceFile,
+                        },
+                        collector,
+                        collectRenamedTypes,
+                        [`${resolverName}:`],
+                    );
+                } catch (e) {
+                    collector.removeType(resolverTypeName);
+                    collector.removeType(`${resolverTypeName}!`);
 
-                console.error(e);
-                console.error(`${resolverName} is not a valid resolver`);
-                continue;
-            }
-
-            collector.removeType("RESOLVER");
-            collector.removeType("RESOLVER!");
-
-            resolverMeta.name = resolverName;
-            collector.addType(resolverMeta);
-
-            const args = resolverMeta.fields.find((f) => f.name === "args");
-            const ret = resolverMeta.fields.find((f) => f.name === "return");
-
-            if (!args || !ret) {
-                corruptedResolvers.push({
-                    resolverName,
-                    error: `Resolver ${resolverName} has no args or return type, there's something going veery wrong here!\nYour file '${originalSourceFile.fileName}' has no effect on the schema.`,
-                });
-                continue;
-            }
-
-            const __typename = resolverMeta.fields.find(
-                (f) => f.name === "__typename",
-            );
-
-            if (__typename && __typename.type.isEnum) {
-                const rawTypeName = __typename.type.enumValues[0].name;
-
-                const finalTypeName =
-                    Array(ret.type.isList).fill("[").join("") +
-                    rawTypeName +
-                    Array(ret.type.isList).fill("]").join("");
-
-                const ref = [...resolverMeta.path, "return"].join(".");
-                collector.removeType(__typename.type.name);
-                collector.removeTypeReference(ret.type.name, ref);
-                collector.typeReferences.forEach((refs, typeNames) => {
-                    if (refs.includes(ref)) {
-                        collector.removeTypeReference(typeNames, ref);
-                    }
-                });
-
-                collectRenamedTypes.set(ret.type.name, finalTypeName);
-                collector.addTypeReference(
-                    finalTypeName,
-                    [...resolverMeta.path, "return"].join("."),
-                );
-
-                // collector.removeType(ret.type.name);
-                ret.type.name = finalTypeName;
-                collector.addType(ret.type);
-
-                if (ret.type.isList) {
-                    collector.addType({
-                        ...ret.type,
-                        isList: 0,
-                        name: rawTypeName,
-                    });
+                    console.error(e);
+                    console.error(`${resolverName} is not a valid resolver`);
+                    continue;
                 }
-            }
 
-            meta.operations.push({
-                file: file,
-                operation: operationType,
-                name: camelCase([
-                    ...namespacingArray,
-                    filename === "index.ts" ? "" : filename,
-                ]).replaceAll(".ts", ""),
-                description: checker
-                    .getSymbolsInScope(
-                        originalSourceFile!.endOfFileToken,
-                        ts.SymbolFlags.All,
-                    )
-                    .find((s) => s.name === operationType)!
-                    .getDocumentationComment(checker)
-                    .map((part) => part.text)
-                    .join(""),
-                args: args?.type.fields ?? [],
-                type: ret.type,
-            });
+                collector.removeType(resolverTypeName);
+                collector.removeType(`${resolverTypeName}!`);
 
-            if (options.onFileCollected) {
-                await options.onFileCollected(
-                    file,
-                    meta.operations[meta.operations.length - 1],
-                    "operation",
+                resolverMeta.name = resolverName;
+                collector.addType(resolverMeta);
+
+                const args = resolverMeta.fields.find((f) => f.name === "args");
+                const ret = resolverMeta.fields.find((f) => f.name === "return");
+
+                if (!args || !ret) {
+                    corruptedResolvers.push({
+                        resolverName,
+                        error: `Resolver ${resolverName} has no args or return type, there's something going veery wrong here!\nYour file '${originalSourceFile.fileName}' has no effect on the schema.`,
+                    });
+                    continue;
+                }
+
+                const __typename = resolverMeta.fields.find(
+                    (f) => f.name === "__typename",
                 );
+
+                if (__typename && __typename.type.isEnum) {
+                    const rawTypeName = __typename.type.enumValues[0].name;
+
+                    const finalTypeName =
+                        Array(ret.type.isList).fill("[").join("") +
+                        rawTypeName +
+                        Array(ret.type.isList).fill("]").join("");
+
+                    const ref = [...resolverMeta.path, "return"].join(".");
+                    collector.removeType(__typename.type.name);
+                    collector.removeTypeReference(ret.type.name, ref);
+                    collector.typeReferences.forEach((refs, typeNames) => {
+                        if (refs.includes(ref)) {
+                            collector.removeTypeReference(typeNames, ref);
+                        }
+                    });
+
+                    collectRenamedTypes.set(ret.type.name, finalTypeName);
+                    collector.addTypeReference(
+                        finalTypeName,
+                        [...resolverMeta.path, "return"].join("."),
+                    );
+
+                    // collector.removeType(ret.type.name);
+                    ret.type.name = finalTypeName;
+                    collector.addType(ret.type);
+
+                    if (ret.type.isList) {
+                        collector.addType({
+                            ...ret.type,
+                            isList: 0,
+                            name: rawTypeName,
+                        });
+                    }
+                }
+
+                meta.operations.push({
+                    file: file,
+                    operation: operationType,
+                    name: camelCase([
+                        ...namespacingArray,
+                        filename === "index.ts" ? "" : filename,
+                    ]).replaceAll(".ts", ""),
+                    description: checker
+                        .getSymbolsInScope(
+                            originalSourceFile!.endOfFileToken,
+                            ts.SymbolFlags.All,
+                        )
+                        .find((s) => s.name === operationType)!
+                        .getDocumentationComment(checker)
+                        .map((part) => part.text)
+                        .join(""),
+                    args: args?.type.fields ?? [],
+                    type: ret.type,
+                });
+
+                if (options.onFileCollected) {
+                    await options.onFileCollected(
+                        file,
+                        meta.operations[meta.operations.length - 1],
+                        "operation",
+                    );
+                }
             }
         }
         if (fileType === "type") {

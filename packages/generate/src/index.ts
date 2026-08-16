@@ -324,7 +324,7 @@ export class Generator {
 
         for (const operation of schemaMeta.operations) {
             opsImports.push(
-                `import { ${operation.operation} as ${operation.name} } from "${path.resolve(operationsDir, operation.file)}";`,
+                `import { ${operation.operation} as ${operation.operation}_${operation.name} } from "${path.resolve(operationsDir, operation.file)}";`,
             );
             if (operation.operation === "Query") {
                 queries.set(operation.name, operation);
@@ -402,7 +402,7 @@ export class Generator {
             ${Array.from(queries.entries())
                 .map(
                     ([name, operation]) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"})`,
+                        `${name}: makeGraphQLResolverFn(${operation.operation}_${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"})`,
                 )
                 .join(",\n")}
         };`;
@@ -410,7 +410,7 @@ export class Generator {
             ${Array.from(mutations.entries())
                 .map(
                     ([name, operation]) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"})`,
+                        `${name}: makeGraphQLResolverFn(${operation.operation}_${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"})`,
                 )
                 .join(",\n")}
         };`;
@@ -418,7 +418,7 @@ export class Generator {
             ${Array.from(subscriptions.entries())
                 .map(
                     ([name, operation]) =>
-                        `${name}: makeGraphQLResolverFn(${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"}, true)`,
+                        `${name}: makeGraphQLResolverFn(${operation.operation}_${name}, "${name}", ${operation.args.length ? `{ ${operation.args.map(a => `"${a.name}": ${a.index}`).join(", ")}}` : "{}"}, true)`,
                 )
                 .join(",\n")}
         };`;
