@@ -171,6 +171,8 @@ export const gatherMetaFromOperationsDir = async (
                         /(.*?)(Cannot find module|Cannot find package) '([^']+)' from '([^']+)(.*)/,
                     ) ?? [];
                 if (
+                    moduleName &&
+                    fromPath &&
                     ![".cobalt/auth/oauth", ".cobalt/auth/sdk"].includes(
                         moduleName,
                     ) &&
@@ -184,7 +186,7 @@ export const gatherMetaFromOperationsDir = async (
                 const [_, __, moduleName]: string[] =
                     message.match(/(.*?)No such built-in module: (.*)$/) ?? [];
 
-                if (!moduleName.includes("node:")) {
+                if (moduleName && !moduleName.includes("node:")) {
                     notResolvableModules.push({
                         moduleName,
                     });
@@ -232,6 +234,8 @@ export const gatherMetaFromFiles = async (
                             /(.*?)(Cannot find module|Cannot find package) '([^']+)' from '([^']+)(.*)/,
                         ) ?? [];
                     if (
+                        moduleName &&
+                        fromPath &&
                         ![".cobalt/auth/oauth", ".cobalt/auth/sdk"].includes(
                             moduleName,
                         ) &&
@@ -245,7 +249,7 @@ export const gatherMetaFromFiles = async (
                     const [_, __, moduleName]: string[] =
                         message.match(/(.*?)No such built-in module: (.*)$/) ?? [];
 
-                    if (!moduleName.includes("node:")) {
+                    if (moduleName && !moduleName.includes("node:")) {
                         notResolvableModules.push({
                             moduleName,
                         });
