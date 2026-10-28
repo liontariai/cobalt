@@ -2,6 +2,7 @@
     "compilerOptions": {
         // Enable latest features
         "lib": ["ESNext", "DOM"],
+        "types": ["bun-types"],
         "target": "ESNext",
         "module": "ESNext",
         "moduleDetection": "force",
@@ -24,5 +25,6 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "noPropertyAccessFromIndexSignature": false
-    }
+    },
+    "include": ["scripts/*.ts"]
 }
