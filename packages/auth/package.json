@@ -1,73 +1,73 @@
 {
-    "name": "@cobalt27/auth",
-    "version": "0.5.26",
-    "module": "src/index.ts",
-    "main": "src/index.ts",
-    "type": "module",
-    "license": "SSPL-1.0",
-    "files": [
-        "dist/**/*",
-        "src/**/*.ts",
-        "src/**/*.zmodel",
-        "!src/**/schema.prisma",
-        "!src/server/db/schema/@prisma/**/*",
-        "!dist/**/__tests__/*",
-        "!src/**/__tests__/*",
-        "react/**/*",
-        "README.md",
-        "package.json",
-        "prisma.config.ts",
-        "tsconfig.json",
-        ".env.public"
-    ],
-    "publishConfig": {
-        "access": "public",
-        "main": "dist/cjs/index.js",
-        "module": "dist/esm/index.js",
-        "types": "./dist/types/src/index.d.ts"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/liontariai/cobalt",
-        "directory": "packages/auth"
-    },
-    "scripts": {
-        "dev": "OPENAUTH_ISSUER=http://localhost:4000 bun --watch -e 'await import(\"@cobalt27/dev\")' - dev --dir ./src/server/operations",
-        "format": "prettier --write .",
-        "setup:oauth-sdks": "bun -e 'await (await import(\"./src/generate/oauth-sdks.ts\")).generateOauthSdks();'",
-        "setup:zenstack": "zenstack generate --schema ./src/server/db/schema/_schema.zmodel --output ./src/server/db/zenstack"
-    },
-    "devDependencies": {
-        "@cobalt27/dev": "workspace:*",
-        "@samarium.sdk/new": "0.30.3",
-        "@types/aws-lambda": "8.10.147",
-        "@types/bun": "latest",
-        "@types/node": "latest",
-        "prettier": "latest"
-    },
-    "peerDependencies": {
-        "typescript": "~5.7.3"
-    },
-    "prettier": {
-        "tabWidth": 4
-    },
-    "dependencies": {
-        "@aws-sdk/client-sesv2": "^3.758.0",
-        "@cobalt27/runtime": "workspace:*",
-        "@electric-sql/pglite": "^0.3.7",
-        "@openauthjs/openauth": "^0.4.3",
-        "@prisma/client": "~6.13.0",
-        "@samarium.sdk/make": "0.30.3",
-        "@zenstackhq/runtime": "~2.18.0",
-        "@zenstackhq/sdk": "~2.18.0",
-        "cookie": "^1.0.2",
-        "dotenv": "^17.2.0",
-        "glob": "^13.0.0",
-        "hono": "^4.8.0",
-        "pglite-prisma-adapter": "^0.6.1",
-        "prisma": "~6.13.0",
-        "sst": "3.9.20",
-        "valibot": "1.1.0",
-        "zenstack": "~2.18.0"
-    }
+  "name": "@cobalt27/auth",
+  "version": "0.5.27",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "type": "module",
+  "license": "SSPL-1.0",
+  "files": [
+    "dist/**/*",
+    "src/**/*.ts",
+    "src/**/*.zmodel",
+    "!src/**/schema.prisma",
+    "!src/server/db/schema/@prisma/**/*",
+    "!dist/**/__tests__/*",
+    "!src/**/__tests__/*",
+    "react/**/*",
+    "README.md",
+    "package.json",
+    "prisma.config.ts",
+    "tsconfig.json",
+    ".env.public"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "types": "./dist/types/src/index.d.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liontariai/cobalt",
+    "directory": "packages/auth"
+  },
+  "scripts": {
+    "dev": "OPENAUTH_ISSUER=http://localhost:4000 bun --watch -e 'await import(\"@cobalt27/dev\")' - dev --dir ./src/server/operations",
+    "format": "prettier --write .",
+    "setup:oauth-sdks": "bun -e 'await (await import(\"./src/generate/oauth-sdks.ts\")).generateOauthSdks();'",
+    "setup:zenstack": "zenstack generate --schema ./src/server/db/schema/_schema.zmodel --output ./src/server/db/zenstack"
+  },
+  "devDependencies": {
+    "@cobalt27/dev": "workspace:*",
+    "@samarium.sdk/new": "0.30.3",
+    "@types/aws-lambda": "8.10.147",
+    "@types/bun": "latest",
+    "@types/node": "latest",
+    "prettier": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "~5.7.3"
+  },
+  "prettier": {
+    "tabWidth": 4
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.758.0",
+    "@cobalt27/runtime": "workspace:*",
+    "@electric-sql/pglite": "^0.3.7",
+    "@openauthjs/openauth": "^0.4.3",
+    "@prisma/client": "~6.13.0",
+    "@samarium.sdk/make": "0.30.3",
+    "@zenstackhq/runtime": "~2.18.0",
+    "@zenstackhq/sdk": "~2.18.0",
+    "cookie": "^1.0.2",
+    "dotenv": "^17.2.0",
+    "glob": "^13.0.0",
+    "hono": "^4.8.0",
+    "pglite-prisma-adapter": "^0.6.1",
+    "prisma": "~6.13.0",
+    "sst": "3.9.20",
+    "valibot": "1.1.0",
+    "zenstack": "~2.18.0"
+  }
 }

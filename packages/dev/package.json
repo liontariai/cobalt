@@ -1,58 +1,58 @@
 {
-    "name": "@cobalt27/dev",
-    "version": "0.5.26",
-    "module": "src/index.ts",
-    "main": "src/index.ts",
-    "type": "module",
-    "bin": {
-        "cobalt": "dist/esm/index.js"
-    },
-    "license": "SSPL-1.0",
-    "files": [
-        "dist/**/*",
-        "src/**/*.ts",
-        "!dist/**/__tests__/*",
-        "!src/**/__tests__/*",
-        "README.md",
-        "package.json"
-    ],
-    "publishConfig": {
-        "access": "public",
-        "main": "dist/cjs/index.js",
-        "module": "dist/esm/index.js",
-        "types": "./dist/types/src/index.d.ts"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/liontariai/cobalt",
-        "directory": "packages/dev"
-    },
-    "scripts": {
-        "format": "prettier --write .",
-        "bundle": "bun bundle.ts",
-        "prepublishOnly": "bun run bundle"
-    },
-    "devDependencies": {
-        "@types/bun": "latest",
-        "@types/tar-stream": "^3.1.4"
-    },
-    "peerDependencies": {
-        "typescript": "~5.7.3"
-    },
-    "prettier": {
-        "tabWidth": 4
-    },
-    "dependencies": {
-        "@cobalt27/generate": "workspace:*",
-        "@cobalt27/runtime": "workspace:*",
-        "@graphql-tools/schema": "^10.0.14",
-        "@samarium.sdk/make": "0.30.3",
-        "commander": "^12.1.0",
-        "comment-json": "^4.2.5",
-        "graphql": "^16.8.1",
-        "graphql-sse": "^2.5.4",
-        "hono": "^4.8.0",
-        "prettier": "^3.5.3",
-        "tar-stream": "^3.1.7"
-    }
+  "name": "@cobalt27/dev",
+  "version": "0.5.27",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "type": "module",
+  "bin": {
+    "cobalt": "dist/esm/index.js"
+  },
+  "license": "SSPL-1.0",
+  "files": [
+    "dist/**/*",
+    "src/**/*.ts",
+    "!dist/**/__tests__/*",
+    "!src/**/__tests__/*",
+    "README.md",
+    "package.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "types": "./dist/types/src/index.d.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liontariai/cobalt",
+    "directory": "packages/dev"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "bundle": "bun bundle.ts",
+    "prepublishOnly": "bun run bundle"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/tar-stream": "^3.1.4"
+  },
+  "peerDependencies": {
+    "typescript": "~5.7.3"
+  },
+  "prettier": {
+    "tabWidth": 4
+  },
+  "dependencies": {
+    "@cobalt27/generate": "workspace:*",
+    "@cobalt27/runtime": "workspace:*",
+    "@graphql-tools/schema": "^10.0.14",
+    "@samarium.sdk/make": "0.30.3",
+    "commander": "^12.1.0",
+    "comment-json": "^4.2.5",
+    "graphql": "^16.8.1",
+    "graphql-sse": "^2.5.4",
+    "hono": "^4.8.0",
+    "prettier": "^3.5.3",
+    "tar-stream": "^3.1.7"
+  }
 }

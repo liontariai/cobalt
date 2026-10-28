@@ -1,44 +1,44 @@
 {
-    "name": "@cobalt27/runtime",
-    "version": "0.5.26",
-    "module": "src/index.ts",
-    "main": "src/index.ts",
-    "types": "./types/index.d.ts",
-    "sideEffects": true,
-    "license": "SSPL-1.0",
-    "files": [
-        "dist/**/*",
-        "src/**/*.ts",
-        "types/**/*.ts",
-        "!dist/**/__tests__/*",
-        "!src/**/__tests__/*",
-        "README.md",
-        "package.json"
-    ],
-    "publishConfig": {
-        "access": "public",
-        "main": "dist/esm/index.js",
-        "module": "dist/esm/index.js",
-        "types": "dist/src/types/index.d.ts"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/liontariai/cobalt",
-        "directory": "packages/runtime"
-    },
-    "scripts": {
-        "format": "prettier --write .",
-        "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`",
-        "prepublishOnly": "bun run bundle"
-    },
-    "devDependencies": {
-        "@types/bun": "latest",
-        "prettier": "latest"
-    },
-    "peerDependencies": {
-        "typescript": "~5.7.3"
-    },
-    "prettier": {
-        "tabWidth": 4
-    }
+  "name": "@cobalt27/runtime",
+  "version": "0.5.27",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "types": "./types/index.d.ts",
+  "sideEffects": true,
+  "license": "SSPL-1.0",
+  "files": [
+    "dist/**/*",
+    "src/**/*.ts",
+    "types/**/*.ts",
+    "!dist/**/__tests__/*",
+    "!src/**/__tests__/*",
+    "README.md",
+    "package.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/esm/index.js",
+    "module": "dist/esm/index.js",
+    "types": "dist/src/types/index.d.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liontariai/cobalt",
+    "directory": "packages/runtime"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "bundle": "bun bundle.ts && tsc && rm -rf `find ./dist/ -type d -name __tests__`",
+    "prepublishOnly": "bun run bundle"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "~5.7.3"
+  },
+  "prettier": {
+    "tabWidth": 4
+  }
 }
